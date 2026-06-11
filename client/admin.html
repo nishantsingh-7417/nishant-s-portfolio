@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — Nishant's Portfolio</title>
+    <meta name="description" content="Admin dashboard to manage skills and projects.">
+    <link rel="stylesheet" href="./css/admin.css">
+</head>
+
+<body>
+    <!-- ── Login Screen ── -->
+    <div id="login-screen" class="login-screen">
+        <div class="login-card">
+            <div class="login-icon">🔐</div>
+            <h1>Admin Access</h1>
+            <p class="login-subtitle">Enter your password to manage the portfolio.</p>
+            <form id="login-form">
+                <div class="input-group">
+                    <input type="password" id="login-password" placeholder="Password" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+                <p id="login-error" class="error-msg"></p>
+            </form>
+            <a href="./index.html" class="back-link">← Back to Portfolio</a>
+        </div>
+    </div>
+
+    <!-- ── Dashboard (hidden until login) ── -->
+    <div id="dashboard" class="dashboard hidden">
+        <header class="dash-header">
+            <div class="dash-logo">[N]ishant <span class="dash-badge">Admin</span></div>
+            <div class="dash-actions">
+                <a href="./index.html" class="btn btn-ghost">View Site</a>
+                <button id="logout-btn" class="btn btn-ghost btn-danger">Logout</button>
+            </div>
+        </header>
+
+        <main class="dash-main">
+            <!-- ═══ Skills Management ═══ -->
+            <section class="dash-section">
+                <div class="section-head">
+                    <h2>Skills</h2>
+                    <button id="toggle-add-skill" class="btn btn-primary btn-sm">+ Add Skill</button>
+                </div>
+
+                <!-- Add Skill Form (hidden by default) -->
+                <div id="add-skill-form" class="form-card hidden">
+                    <h3>Add New Skill</h3>
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label for="skill-name">Name *</label>
+                            <input type="text" id="skill-name" placeholder="e.g. React" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="skill-icon">Icon URL *</label>
+                            <input type="text" id="skill-icon" placeholder="https://cdn.jsdelivr.net/..." required>
+                        </div>
+                        <div class="input-group">
+                            <label for="skill-row">Row (1-4)</label>
+                            <input type="number" id="skill-row" value="1" min="1" max="4">
+                        </div>
+                        <div class="input-group">
+                            <label for="skill-angle">Angle (degrees)</label>
+                            <input type="number" id="skill-angle" value="0" min="-180" max="180">
+                        </div>
+                        <div class="input-group">
+                            <label for="skill-radius">Orbit Radius (px)</label>
+                            <input type="number" id="skill-radius" value="200" min="80" max="320">
+                        </div>
+                        <div class="input-group">
+                            <label for="skill-filter">CSS Filter Class</label>
+                            <select id="skill-filter">
+                                <option value="">None (colored)</option>
+                                <option value="white-svg">White (invert)</option>
+                                <option value="trpc-svg">tRPC Blue</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button id="save-skill-btn" class="btn btn-primary">Save Skill</button>
+                        <button id="cancel-skill-btn" class="btn btn-ghost">Cancel</button>
+                    </div>
+                </div>
+
+                <!-- Skills List -->
+                <div id="skills-list" class="items-grid">
+                    <p class="loading-text">Loading skills...</p>
+                </div>
+            </section>
+
+            <!-- ═══ Projects Management ═══ -->
+            <section class="dash-section">
+                <div class="section-head">
+                    <h2>Projects</h2>
+                    <button id="toggle-add-project" class="btn btn-primary btn-sm">+ Add Project</button>
+                </div>
+
+                <!-- Add Project Form (hidden by default) -->
+                <div id="add-project-form" class="form-card hidden">
+                    <h3>Add New Project</h3>
+                    <div class="form-grid">
+                        <div class="input-group full-width">
+                            <label for="project-title">Title *</label>
+                            <input type="text" id="project-title" placeholder="e.g. EdTech Platform" required>
+                        </div>
+                        <div class="input-group full-width">
+                            <label for="project-desc">Description *</label>
+                            <textarea id="project-desc" rows="3" placeholder="Brief description of the project..." required></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label for="project-image">Image URL</label>
+                            <input type="text" id="project-image" placeholder="https://...">
+                        </div>
+                        <div class="input-group">
+                            <label for="project-tags">Tags (comma separated)</label>
+                            <input type="text" id="project-tags" placeholder="React, Node.js, PostgreSQL">
+                        </div>
+                        <div class="input-group">
+                            <label for="project-github">GitHub URL</label>
+                            <input type="text" id="project-github" placeholder="https://github.com/...">
+                        </div>
+                        <div class="input-group">
+                            <label for="project-demo">Live Demo URL</label>
+                            <input type="text" id="project-demo" placeholder="https://...">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button id="save-project-btn" class="btn btn-primary">Save Project</button>
+                        <button id="cancel-project-btn" class="btn btn-ghost">Cancel</button>
+                    </div>
+                </div>
+
+                <!-- Projects List -->
+                <div id="projects-list" class="items-grid">
+                    <p class="loading-text">Loading projects...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="./js/admin.js"></script>
+</body>
+
+</html>

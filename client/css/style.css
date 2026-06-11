@@ -345,3 +345,248 @@ a {
         max-width: 100%;
     }
 }
+
+/* ══════════════════════════════════════
+   SKILLS SECTION (ORBITAL CONCENTRIC DESIGN)
+   ══════════════════════════════════════ */
+.skills-section {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    min-height: 120vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 120px 8% 160px 8%;
+    color: #e0e0e0;
+    overflow: hidden;
+}
+
+.skills-header {
+    width: 100%;
+    max-width: 900px;
+    margin-bottom: 20px;
+    text-align: left;
+    position: relative;
+    z-index: 5;
+}
+
+.skills-tagline {
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 4px;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.section-title-large {
+    font-size: clamp(3rem, 6vw, 4.5rem);
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: #fff;
+    margin: 0;
+}
+
+.skills-orbit-container {
+    position: relative;
+    width: 600px;
+    height: 520px;
+    margin: 60px auto 0 auto;
+    z-index: 3;
+    /* Concentric faint orbital guides behind the icons */
+    background: 
+        radial-gradient(circle at 50% 50%, transparent 129px, rgba(255, 255, 255, 0.015) 130px, transparent 131px), /* Row 3 (radius 130px) */
+        radial-gradient(circle at 50% 50%, transparent 149px, rgba(255, 255, 255, 0.015) 150px, transparent 151px), /* Row 4 (radius 150px) */
+        radial-gradient(circle at 50% 50%, transparent 194px, rgba(255, 255, 255, 0.015) 195px, transparent 196px), /* Row 2 (radius 195px) */
+        radial-gradient(circle at 50% 50%, transparent 259px, rgba(255, 255, 255, 0.01) 260px, transparent 261px);  /* Row 1 (radius 260px) */
+}
+
+/* Center placeholder to align the canvas-drawn black hole */
+#skills-blackhole-placeholder {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 60px;
+    height: 60px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Individual skill badges */
+.skill-item {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    /* Start at center, scale 0, opacity 0. Transformed by JS variables. */
+    transform: translate(-50%, -50%) translate(var(--tx, 0px), var(--ty, 0px)) scale(var(--scale, 0));
+    opacity: var(--opacity, 0);
+    /* Heavy animation physics during flyout; switches during hover */
+    transition: transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.8s ease;
+    cursor: pointer;
+    z-index: 5;
+}
+
+/* Hover acceleration: disable slow transition for responsive magnetic mouse-tracking */
+.skill-item:hover {
+    transition: transform 0.12s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease;
+    z-index: 10;
+}
+
+/* Glass badge structure */
+.skill-icon-wrapper {
+    width: 72px;
+    height: 72px;
+    background: rgba(255, 255, 255, 0.015);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 
+        0 10px 25px rgba(0, 0, 0, 0.45),
+        inset 0 2px 4px rgba(255, 255, 255, 0.05);
+    transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.skill-icon-wrapper img {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    pointer-events: none;
+    transition: filter 0.3s ease;
+}
+
+/* SVG Custom Logo Coloring and Inverting */
+.white-svg img {
+    filter: brightness(0) invert(1);
+}
+
+.trpc-svg img {
+    /* Inverts default black simple-icons SVG to the tRPC brand blue color */
+    filter: invert(48%) sepia(79%) saturate(4561%) hue-rotate(184deg) brightness(96%) contrast(101%);
+    width: 32px;
+    height: 32px;
+}
+
+/* Hover details */
+.skill-item:hover .skill-icon-wrapper {
+    background: rgba(255, 255, 255, 0.045);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 
+        0 15px 30px rgba(0, 0, 0, 0.65),
+        0 0 20px rgba(255, 255, 255, 0.05);
+}
+
+/* Vibration keyframe animation on logo */
+.skill-item:hover img {
+    animation: vibrateLogo 0.25s linear infinite;
+}
+
+@keyframes vibrateLogo {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    20% { transform: translate(-1.2px, 0.8px) rotate(-1deg); }
+    40% { transform: translate(-0.8px, -1.2px) rotate(1deg); }
+    60% { transform: translate(1.2px, 0.8px) rotate(-0.5deg); }
+    80% { transform: translate(0.8px, -0.8px) rotate(0.5deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+/* Floating tooltips displaying skill names */
+.skill-name {
+    position: absolute;
+    bottom: -32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(5px);
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.65);
+    font-weight: 500;
+    letter-spacing: 0.8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    white-space: nowrap;
+    background: rgba(8, 8, 10, 0.9);
+    padding: 5px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+}
+
+.skill-item:hover .skill-name {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Responsive Overrides: Convert orbits to clean center-flowing flex grid on tablet/mobile */
+@media (max-width: 768px) {
+    .skills-section {
+        min-height: auto;
+        padding: 80px 5% 100px 5%;
+    }
+    
+    .skills-header {
+        margin-bottom: 30px;
+    }
+    
+    .skills-orbit-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 32px 24px;
+        width: 100%;
+        height: auto;
+        margin: 20px 0 0 0;
+        background: none; /* remove background concentric lines on mobile */
+    }
+    
+    #skills-blackhole-placeholder {
+        display: none !important; /* Hide center element on mobile layout */
+    }
+    
+    .skill-item {
+        position: relative !important;
+        left: auto !important;
+        top: auto !important;
+        transform: scale(1) !important;
+        opacity: 1 !important;
+        width: auto;
+        height: auto;
+        cursor: default;
+    }
+    
+    .skill-icon-wrapper {
+        width: 64px;
+        height: 64px;
+    }
+    
+    .skill-icon-wrapper img {
+        width: 32px;
+        height: 32px;
+    }
+    
+    /* Make tooltips permanently visible but static and clean underneath on mobile since hover is unavailable */
+    .skill-name {
+        position: relative;
+        bottom: auto;
+        left: auto;
+        transform: none !important;
+        opacity: 0.8 !important;
+        display: block;
+        margin-top: 8px;
+        text-align: center;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        font-size: 0.68rem;
+        letter-spacing: 0.4px;
+        color: rgba(255, 255, 255, 0.5);
+    }
+}

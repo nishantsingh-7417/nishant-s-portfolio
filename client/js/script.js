@@ -9,10 +9,8 @@
     let stars = [];
     const STAR_COUNT = 600;
 
-    /* Black hole config — positioned near the top of the starfield wrapper */
+    /* Black hole config — position updated dynamically based on DOM */
     const blackHole = {
-        xRatio: 0.5,        // center horizontally
-        yOffset: 350,        // px from top of starfield wrapper
         coreRadius: 28,
         diskRadiusX: 130,
         diskRadiusY: 38,
@@ -22,11 +20,28 @@
         rotationSpeed: 0.004,
     };
 
+    let bhX = 0;
+    let bhY = 0;
+    const placeholder = document.getElementById('skills-blackhole-placeholder');
+
+    function updateBlackHolePosition() {
+        if (placeholder && window.getComputedStyle(placeholder).display !== 'none') {
+            const rect = placeholder.getBoundingClientRect();
+            const wrapperRect = canvas.parentElement.getBoundingClientRect();
+            bhX = rect.left - wrapperRect.left + rect.width / 2;
+            bhY = rect.top - wrapperRect.top + rect.height / 2;
+        } else {
+            bhX = canvas.width * 0.5;
+            bhY = -1000; // Hide off-screen on mobile
+        }
+    }
+
     /* ── Resize handler ── */
     function resize() {
         const wrapper = canvas.parentElement;
         canvas.width = wrapper.offsetWidth;
         canvas.height = wrapper.offsetHeight;
+        updateBlackHolePosition();
     }
 
     /* ── Create a single star ── */
@@ -204,8 +219,7 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         time += 1;
 
-        const bhX = canvas.width * blackHole.xRatio;
-        const bhY = blackHole.yOffset;
+        // bhX and bhY are outer-scope variables updated dynamically on resize
 
         /* ── Draw stars ── */
         for (const s of stars) {
@@ -289,4 +303,170 @@
             resize();
         }, 150);
     });
+
+    // Force position recalculation once the window has fully loaded
+    window.addEventListener('load', () => {
+        updateBlackHolePosition();
+    });
+
+    /* ══════════════════════════════════════
+       ORBITAL SKILLS DYNAMICS
+       ══════════════════════════════════════ */
+
+    // Determine API base URL. When served by Express it's the same origin.
+    // When opened as file://, API won't be available — fallback gracefully.
+    const API_BASE = window.location.protocol === 'file:'
+        ? null
+        : window.location.origin + '/api';
+
+    /**
+     * Creates a single .skill-item DOM element from a skill data object.
+     */
+    function createSkillElement(skill) {
+        const div = document.createElement('div');
+        div.className = 'skill-item';
+        div.setAttribute('data-row', skill.row);
+        div.setAttribute('data-angle', skill.angle);
+        div.setAttribute('data-radius', skill.radius);
+        div.setAttribute('data-name', skill.name);
+
+        const wrapper = document.createElement('div');
+        wrapper.className = `skill-icon-wrapper${skill.filter ? ' ' + skill.filter : ''}`;
+
+        const img = document.createElement('img');
+        img.src = skill.icon;
+        img.alt = skill.name;
+
+        wrapper.appendChild(img);
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'skill-name';
+        nameSpan.textContent = skill.name;
+
+        div.appendChild(wrapper);
+        div.appendChild(nameSpan);
+
+        return div;
+    }
+
+    /**
+     * Binds flyout animation and magnetic hover to a NodeList of skill items.
+     */
+    function bindSkillInteractions(container, items) {
+        // 1. Scroll-triggered flyout
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    animateSkillsOut(items);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15 });
+
+        observer.observe(container);
+
+        // 2. Magnetic mouse tracking
+        items.forEach(item => {
+            item.addEventListener('mousemove', (e) => {
+                if (window.innerWidth <= 768) return;
+
+                const rect = item.getBoundingClientRect();
+                const x = e.clientX - rect.left - rect.width / 2;
+                const y = e.clientY - rect.top - rect.height / 2;
+
+                const pull = 0.35;
+
+                const tx = item.style.getPropertyValue('--tx') || '0px';
+                const ty = item.style.getPropertyValue('--ty') || '0px';
+
+                item.style.transform = `translate(-50%, -50%) translate(${tx}, ${ty}) translate(${x * pull}px, ${y * pull}px) scale(1.15)`;
+            });
+
+            item.addEventListener('mouseleave', () => {
+                if (window.innerWidth <= 768) return;
+
+                const tx = item.style.getPropertyValue('--tx') || '0px';
+                const ty = item.style.getPropertyValue('--ty') || '0px';
+
+                item.style.transform = `translate(-50%, -50%) translate(${tx}, ${ty}) scale(1)`;
+            });
+        });
+    }
+
+    function animateSkillsOut(items) {
+        if (window.innerWidth <= 768) return;
+
+        items.forEach((item, index) => {
+            const angle = parseFloat(item.getAttribute('data-angle'));
+            const radius = parseFloat(item.getAttribute('data-radius'));
+            const angleRad = (angle * Math.PI) / 180;
+
+            const tx = Math.cos(angleRad) * radius;
+            const ty = Math.sin(angleRad) * radius;
+
+            // Start at event horizon
+            item.style.setProperty('--tx', '0px');
+            item.style.setProperty('--ty', '0px');
+            item.style.setProperty('--scale', '0');
+            item.style.setProperty('--opacity', '0');
+
+            // Stagger release
+            setTimeout(() => {
+                item.style.setProperty('--tx', `${tx}px`);
+                item.style.setProperty('--ty', `${ty}px`);
+                item.style.setProperty('--scale', '1');
+                item.style.setProperty('--opacity', '1');
+            }, index * 60);
+        });
+    }
+
+    /**
+     * Fetches skills from the API and injects them into the DOM.
+     * Falls back to any pre-existing .skill-item elements if the API is unavailable.
+     */
+    async function loadAndRenderSkills() {
+        const container = document.querySelector('.skills-orbit-container');
+        if (!container) return;
+
+        let items = container.querySelectorAll('.skill-item');
+
+        // Try fetching from the API
+        if (API_BASE) {
+            try {
+                const res = await fetch(`${API_BASE}/skills`);
+                if (res.ok) {
+                    const skills = await res.json();
+
+                    // Clear any existing items (except the blackhole placeholder)
+                    container.querySelectorAll('.skill-item').forEach(el => el.remove());
+
+                    // Build DOM elements from API data
+                    skills.forEach(skill => {
+                        const el = createSkillElement(skill);
+                        container.appendChild(el);
+                    });
+
+                    items = container.querySelectorAll('.skill-item');
+                }
+            } catch (err) {
+                // API unavailable — fall back to whatever is in the HTML
+                console.warn('Skills API unavailable, using static fallback.');
+            }
+        }
+
+        if (items.length > 0) {
+            bindSkillInteractions(container, items);
+        }
+
+        // Recalculate black hole position after skills are placed
+        updateBlackHolePosition();
+    }
+
+    // Kick off skills loading after DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadAndRenderSkills);
+    } else {
+        loadAndRenderSkills();
+    }
 })();
+
