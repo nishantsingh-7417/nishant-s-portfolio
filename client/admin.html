@@ -38,6 +38,34 @@
         </header>
 
         <main class="dash-main">
+            <!-- ═══ Resume Management ═══ -->
+            <section class="dash-section">
+                <div class="section-head">
+                    <h2>Resume</h2>
+                </div>
+
+                <div class="resume-card">
+                    <div id="resume-status" class="resume-status">
+                        <p class="loading-text">Checking resume...</p>
+                    </div>
+
+                    <!-- Upload / Replace form -->
+                    <div class="resume-upload-area" id="resume-upload-area">
+                        <label for="resume-file" class="resume-drop-zone" id="resume-drop-zone">
+                            <span class="resume-drop-icon">📄</span>
+                            <span class="resume-drop-text">Click to select or drag & drop a PDF</span>
+                            <span class="resume-drop-hint">Max 10 MB · PDF only</span>
+                            <input type="file" id="resume-file" accept=".pdf,application/pdf" hidden>
+                        </label>
+                        <div class="resume-actions" id="resume-actions" style="display:none;">
+                            <span id="resume-selected-name" class="resume-selected-name"></span>
+                            <button id="upload-resume-btn" class="btn btn-primary btn-sm">Upload</button>
+                            <button id="cancel-resume-btn" class="btn btn-ghost btn-sm">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- ═══ Skills Management ═══ -->
             <section class="dash-section">
                 <div class="section-head">

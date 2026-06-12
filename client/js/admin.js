@@ -25,6 +25,15 @@
     const saveProjectBtn = document.getElementById('save-project-btn');
     const cancelProjectBtn = document.getElementById('cancel-project-btn');
 
+    // Resume elements
+    const resumeStatus = document.getElementById('resume-status');
+    const resumeFile = document.getElementById('resume-file');
+    const resumeDropZone = document.getElementById('resume-drop-zone');
+    const resumeActions = document.getElementById('resume-actions');
+    const resumeSelectedName = document.getElementById('resume-selected-name');
+    const uploadResumeBtn = document.getElementById('upload-resume-btn');
+    const cancelResumeBtn = document.getElementById('cancel-resume-btn');
+
     // ══════════════════════════════════════
     //  TOAST NOTIFICATION
     // ══════════════════════════════════════
@@ -49,6 +58,7 @@
             dashboard.classList.remove('hidden');
             loadSkills();
             loadProjects();
+            loadResume();
         } else {
             loginScreen.classList.remove('hidden');
             dashboard.classList.add('hidden');
@@ -87,6 +97,140 @@
         localStorage.removeItem('portfolio_admin_token');
         checkAuth();
     });
+
+    // ══════════════════════════════════════
+    //  RESUME MANAGEMENT
+    // ══════════════════════════════════════
+    let selectedResumeFile = null;
+
+    async function loadResume() {
+        try {
+            const res = await fetch(`${API_BASE}/resume`);
+            if (res.status === 404) {
+                resumeStatus.innerHTML = `
+                    <div class="resume-info">
+                        <div class="resume-info-details">
+                            <h4>No resume uploaded</h4>
+                            <p class="resume-meta">Upload a PDF to let visitors download your resume.</p>
+                        </div>
+                    </div>`;
+                return;
+            }
+            const data = await res.json();
+            const date = new Date(data.uploadedAt).toLocaleDateString('en-IN', {
+                day: 'numeric', month: 'short', year: 'numeric',
+            });
+            const sizeKB = (data.size / 1024).toFixed(1);
+            resumeStatus.innerHTML = `
+                <div class="resume-info">
+                    <div class="resume-info-details">
+                        <h4>📄 ${data.originalName}</h4>
+                        <p class="resume-meta">Uploaded ${date} · ${sizeKB} KB</p>
+                    </div>
+                    <div class="resume-info-actions">
+                        <a href="/api/resume/download" target="_blank" class="btn btn-primary btn-sm">Preview</a>
+                        <button class="btn-delete" id="delete-resume-btn">Delete</button>
+                    </div>
+                </div>`;
+
+            // Bind delete
+            document.getElementById('delete-resume-btn').addEventListener('click', deleteResume);
+        } catch (err) {
+            resumeStatus.innerHTML = '<p class="loading-text">Failed to check resume.</p>';
+        }
+    }
+
+    async function uploadResume() {
+        if (!selectedResumeFile) return;
+
+        const formData = new FormData();
+        formData.append('resume', selectedResumeFile);
+
+        try {
+            uploadResumeBtn.textContent = 'Uploading...';
+            uploadResumeBtn.disabled = true;
+
+            const res = await fetch(`${API_BASE}/resume`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${authToken}` },
+                body: formData,
+            });
+
+            const result = await res.json();
+            if (!res.ok) {
+                showToast(result.error || 'Upload failed.', 'error');
+                return;
+            }
+
+            showToast('Resume uploaded!');
+            resetResumeForm();
+            loadResume();
+        } catch (err) {
+            showToast('Server error.', 'error');
+        } finally {
+            uploadResumeBtn.textContent = 'Upload';
+            uploadResumeBtn.disabled = false;
+        }
+    }
+
+    async function deleteResume() {
+        if (!confirm('Delete the resume?')) return;
+        try {
+            const res = await fetch(`${API_BASE}/resume`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${authToken}` },
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                showToast(data.error || 'Delete failed.', 'error');
+                return;
+            }
+            showToast('Resume deleted.');
+            loadResume();
+        } catch (err) {
+            showToast('Server error.', 'error');
+        }
+    }
+
+    function resetResumeForm() {
+        selectedResumeFile = null;
+        resumeFile.value = '';
+        resumeActions.style.display = 'none';
+        resumeSelectedName.textContent = '';
+    }
+
+    // File input change
+    resumeFile.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        selectedResumeFile = file;
+        resumeSelectedName.textContent = file.name;
+        resumeActions.style.display = 'flex';
+    });
+
+    // Drag & drop
+    resumeDropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        resumeDropZone.classList.add('drag-over');
+    });
+    resumeDropZone.addEventListener('dragleave', () => {
+        resumeDropZone.classList.remove('drag-over');
+    });
+    resumeDropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        resumeDropZone.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file && file.type === 'application/pdf') {
+            selectedResumeFile = file;
+            resumeSelectedName.textContent = file.name;
+            resumeActions.style.display = 'flex';
+        } else {
+            showToast('Only PDF files are allowed.', 'error');
+        }
+    });
+
+    uploadResumeBtn.addEventListener('click', uploadResume);
+    cancelResumeBtn.addEventListener('click', resetResumeForm);
 
     // ══════════════════════════════════════
     //  SKILLS CRUD

@@ -131,6 +131,100 @@ a { text-decoration: none; color: inherit; }
 }
 
 /* ══════════════════════════════════════
+   RESUME MANAGEMENT
+   ══════════════════════════════════════ */
+.resume-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 30px;
+}
+
+.resume-status {
+    margin-bottom: 20px;
+}
+
+.resume-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.resume-info-details {
+    flex: 1;
+    min-width: 200px;
+}
+
+.resume-info-details h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+}
+
+.resume-info-details .resume-meta {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.4);
+    line-height: 1.5;
+}
+
+.resume-info-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.resume-drop-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 40px 20px;
+    border: 2px dashed rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.resume-drop-zone:hover,
+.resume-drop-zone.drag-over {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.resume-drop-icon {
+    font-size: 2rem;
+}
+
+.resume-drop-text {
+    font-size: 0.88rem;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.resume-drop-hint {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.resume-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.resume-selected-name {
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.65);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ══════════════════════════════════════
    LOGIN SCREEN
    ══════════════════════════════════════ */
 .login-screen {

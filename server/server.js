@@ -223,6 +223,128 @@ app.delete('/api/projects/:id', authenticateToken, (req, res) => {
     res.json({ message: 'Project deleted.', project: removed[0] });
 });
 
+// ══════════════════════════════════════
+//  RESUME API
+// ══════════════════════════════════════
+const multer = require('multer');
+
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+// Configure multer — single PDF, max 10 MB
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOADS_DIR),
+    filename: (req, file, cb) => {
+        // Always save as resume.<ext> so there's only ever one file
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, `resume${ext}`);
+    },
+});
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'application/pdf') {
+            cb(null, true);
+        } else {
+            cb(new Error('Only PDF files are allowed.'));
+        }
+    },
+});
+
+// GET resume info (public) — returns metadata, not the file
+app.get('/api/resume', (req, res) => {
+    const data = readData();
+    if (!data.resume || !data.resume.filename) {
+        return res.status(404).json({ error: 'No resume uploaded yet.' });
+    }
+
+    const filePath = path.join(UPLOADS_DIR, data.resume.filename);
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'Resume file not found on disk.' });
+    }
+
+    res.json({
+        filename: data.resume.filename,
+        originalName: data.resume.originalName,
+        uploadedAt: data.resume.uploadedAt,
+        size: data.resume.size,
+        downloadUrl: '/api/resume/download',
+    });
+});
+
+// GET resume download (public) — serves the actual PDF
+app.get('/api/resume/download', (req, res) => {
+    const data = readData();
+    if (!data.resume || !data.resume.filename) {
+        return res.status(404).json({ error: 'No resume uploaded yet.' });
+    }
+
+    const filePath = path.join(UPLOADS_DIR, data.resume.filename);
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'Resume file not found on disk.' });
+    }
+
+    // Use the original filename for the download
+    const downloadName = data.resume.originalName || data.resume.filename;
+    res.download(filePath, downloadName);
+});
+
+// POST upload resume (admin only)
+app.post('/api/resume', authenticateToken, (req, res) => {
+    upload.single('resume')(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({ error: 'File too large. Max 10 MB.' });
+            }
+            return res.status(400).json({ error: err.message });
+        }
+        if (err) {
+            return res.status(400).json({ error: err.message });
+        }
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded.' });
+        }
+
+        // Delete old resume if it exists and has a different filename
+        const data = readData();
+        if (data.resume && data.resume.filename && data.resume.filename !== req.file.filename) {
+            const oldPath = path.join(UPLOADS_DIR, data.resume.filename);
+            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        }
+
+        // Save metadata
+        data.resume = {
+            filename: req.file.filename,
+            originalName: req.file.originalname,
+            uploadedAt: new Date().toISOString(),
+            size: req.file.size,
+        };
+        writeData(data);
+
+        res.json({
+            message: 'Resume uploaded successfully.',
+            resume: data.resume,
+        });
+    });
+});
+
+// DELETE resume (admin only)
+app.delete('/api/resume', authenticateToken, (req, res) => {
+    const data = readData();
+    if (!data.resume || !data.resume.filename) {
+        return res.status(404).json({ error: 'No resume to delete.' });
+    }
+
+    const filePath = path.join(UPLOADS_DIR, data.resume.filename);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+    delete data.resume;
+    writeData(data);
+    res.json({ message: 'Resume deleted.' });
+});
+
 // ── Start server ──
 app.listen(PORT, () => {
     console.log(`\n  🚀 Portfolio server running at http://localhost:${PORT}`);
