@@ -13,10 +13,33 @@
 </head>
 
 <body>
-    <!-- ── Loading Screen (black hole + starfield) ── -->
+    <!-- ── Loading Screen (Dancing Yoda) ── -->
     <div id="loading-screen">
-        <canvas id="loading-canvas"></canvas>
+        <div class="yoda-scene">
+            <!-- Yoda body built from CSS shapes -->
+            <div class="yoda-body">
+                <div class="yoda-ear yoda-ear--left"></div>
+                <div class="yoda-ear yoda-ear--right"></div>
+                <div class="yoda-head">
+                    <div class="yoda-eye yoda-eye--left"></div>
+                    <div class="yoda-eye yoda-eye--right"></div>
+                </div>
+                <div class="yoda-robe"></div>
+                <div class="yoda-arm yoda-arm--left"></div>
+                <div class="yoda-arm yoda-arm--right"></div>
+                <div class="yoda-saber">
+                    <div class="yoda-saber-blade"></div>
+                    <div class="yoda-saber-hilt"></div>
+                </div>
+                <div class="yoda-leg yoda-leg--left"></div>
+                <div class="yoda-leg yoda-leg--right"></div>
+            </div>
+            <!-- Ground glow -->
+            <div class="yoda-ground-glow"></div>
+        </div>
+        <p class="loading-text">Patience you must have...</p>
     </div>
+
 
     <!-- ── Main Content (hidden until loading completes) ── -->
     <div id="main-content">
@@ -74,14 +97,58 @@
             <canvas id="starfield"></canvas>
 
             <section id="about" class="about-section">
-                <div class="about-container">
-                    <h2 class="section-title">About Me</h2>
-                    <div class="about-content">
-                        <p>I am a B.Tech graduate (Class of 2026) from NIT Jalandhar. Although my formal academic background is in Textile Technology, my true passion lies in engineering software. I made a deliberate pivot into full-stack development, spending every day coding, self-learning, and shipping functional systems from scratch.</p>
-                        <p>I build web solutions with JavaScript, TypeScript, Node.js, Express, and PostgreSQL. My projects include a vocabulary-focused EdTech platform and a comprehensive hostel mess management app—both engineered to solve real-world problems. Currently, I am sharpening my problem-solving skills in C++ (DSA) and seeking Software Development Engineer (SDE) opportunities.</p>
+                <div class="about-inner">
+
+                    <!-- ── LEFT: Role Cards ── -->
+                    <div class="about-cards">
+                        <div class="role-card" id="card-frontend">
+                            <div class="role-card-icon">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                            </div>
+                            <div class="role-card-body">
+                                <span class="role-card-label">Specialized in</span>
+                                <h3 class="role-card-title">Frontend Dev</h3>
+                                <p class="role-card-desc">React, Next.js, TypeScript — crafting fast, pixel-perfect UIs that feel alive.</p>
+                            </div>
+                        </div>
+
+                        <div class="role-card" id="card-backend">
+                            <div class="role-card-icon">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                            </div>
+                            <div class="role-card-body">
+                                <span class="role-card-label">Experienced in</span>
+                                <h3 class="role-card-title">Backend Dev</h3>
+                                <p class="role-card-desc">Node.js, Express, PostgreSQL — building robust APIs and scalable server-side systems.</p>
+                            </div>
+                        </div>
+
+                        <div class="role-card role-card--target" id="card-genai">
+                            <div class="role-card-icon">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+                            </div>
+                            <div class="role-card-body">
+                                <span class="role-card-label">Next target →</span>
+                                <h3 class="role-card-title">Generative AI</h3>
+                                <p class="role-card-desc">Diving deep into LLMs, prompt engineering & AI-powered product development — the next frontier.</p>
+                            </div>
+                            <div class="role-card-glow"></div>
+                        </div>
                     </div>
+
+                    <!-- ── RIGHT: Bio ── -->
+                    <div class="about-bio">
+                        <p class="about-bio-tagline">WHO I AM</p>
+                        <h2 class="section-title about-bio-title">About Me</h2>
+                        <div class="about-content">
+                            <p>I am a B.Tech graduate (Class of 2026) from NIT Jalandhar. Although my formal academic background is in Textile Technology, my true passion lies in engineering software. I made a deliberate pivot into full-stack development, spending every day coding, self-learning, and shipping functional systems from scratch.</p>
+                            <p>I build web solutions with JavaScript, TypeScript, Node.js, Express, and PostgreSQL. My projects include a vocabulary-focused EdTech platform and a comprehensive hostel mess management app—both engineered to solve real-world problems. Currently, I am sharpening my problem-solving skills in C++ (DSA) and seeking Software Development Engineer (SDE) opportunities.</p>
+                        </div>
+                    </div>
+
                 </div>
             </section>
+
 
             <section id="skills" class="skills-section">
                 <div class="skills-header">

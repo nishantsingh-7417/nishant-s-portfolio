@@ -19,7 +19,7 @@ body {
 }
 
 /* ══════════════════════════════════════
-   LOADING SCREEN
+   LOADING SCREEN — Dancing Yoda
    ══════════════════════════════════════ */
 #loading-screen {
     position: fixed;
@@ -30,13 +30,11 @@ body {
     z-index: 99999;
     background: #040405;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 40px;
     transition: opacity 0.6s ease;
-}
-
-#loading-screen.blast {
-    pointer-events: none;
 }
 
 #loading-screen.hidden {
@@ -44,13 +42,254 @@ body {
     pointer-events: none;
 }
 
-#loading-canvas {
+/* ── Loading text ── */
+.loading-text {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 3px;
+    color: rgba(140, 255, 140, 0.45);
+    text-transform: uppercase;
+    animation: textPulse 2s ease-in-out infinite;
+}
+
+@keyframes textPulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.9; color: rgba(160, 255, 160, 0.7); }
+}
+
+/* ── Yoda scene ── */
+.yoda-scene {
+    position: relative;
+    width: 160px;
+    height: 220px;
+}
+
+/* ── Yoda body wrapper — main dance animation ── */
+.yoda-body {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 140px;
+    animation: yodaDance 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes yodaDance {
+    0%   { transform: translateX(-50%) rotate(-8deg) translateY(0); }
+    30%  { transform: translateX(-50%) rotate(4deg) translateY(-12px); }
+    60%  { transform: translateX(-50%) rotate(-5deg) translateY(-4px); }
+    100% { transform: translateX(-50%) rotate(10deg) translateY(-8px); }
+}
+
+/* ── Head ── */
+.yoda-head {
     position: absolute;
     top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 32px;
+    background: #5a8a3c;
+    border-radius: 50% 50% 45% 45%;
+    z-index: 3;
+    box-shadow: 0 0 14px rgba(100, 200, 80, 0.15);
 }
+
+/* Eyes */
+.yoda-eye {
+    position: absolute;
+    bottom: 10px;
+    width: 6px;
+    height: 6px;
+    background: #e0ffe0;
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(180, 255, 180, 0.6);
+    animation: yodaBlink 3s ease-in-out infinite;
+}
+
+.yoda-eye--left  { left: 8px; }
+.yoda-eye--right { right: 8px; }
+
+@keyframes yodaBlink {
+    0%, 42%, 50%, 100% { transform: scaleY(1); }
+    45% { transform: scaleY(0.1); }
+}
+
+/* ── Ears ── */
+.yoda-ear {
+    position: absolute;
+    top: 10px;
+    width: 30px;
+    height: 10px;
+    background: #4d7a33;
+    z-index: 2;
+    border-radius: 50%;
+}
+
+.yoda-ear--left {
+    left: -12px;
+    transform: rotate(-20deg);
+    animation: earWiggleL 0.8s ease-in-out infinite alternate;
+}
+
+.yoda-ear--right {
+    right: -12px;
+    transform: rotate(20deg);
+    animation: earWiggleR 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes earWiggleL {
+    0%   { transform: rotate(-20deg) translateY(0); }
+    100% { transform: rotate(-12deg) translateY(-3px); }
+}
+
+@keyframes earWiggleR {
+    0%   { transform: rotate(20deg) translateY(0); }
+    100% { transform: rotate(12deg) translateY(-3px); }
+}
+
+/* ── Robe ── */
+.yoda-robe {
+    position: absolute;
+    top: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 44px;
+    height: 60px;
+    background: linear-gradient(180deg, #5c4a2a 0%, #3d3020 100%);
+    border-radius: 8px 8px 14px 14px;
+    z-index: 2;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Arms ── */
+.yoda-arm {
+    position: absolute;
+    top: 38px;
+    width: 10px;
+    height: 36px;
+    background: #4d7a33;
+    border-radius: 6px;
+    z-index: 3;
+}
+
+.yoda-arm--left {
+    left: 1px;
+    transform-origin: top center;
+    animation: armDanceL 0.8s ease-in-out infinite alternate;
+}
+
+.yoda-arm--right {
+    right: 1px;
+    transform-origin: top center;
+    animation: armDanceR 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes armDanceL {
+    0%   { transform: rotate(30deg); }
+    50%  { transform: rotate(-50deg); }
+    100% { transform: rotate(40deg); }
+}
+
+@keyframes armDanceR {
+    0%   { transform: rotate(-30deg); }
+    50%  { transform: rotate(50deg); }
+    100% { transform: rotate(-40deg); }
+}
+
+/* ── Lightsaber ── */
+.yoda-saber {
+    position: absolute;
+    top: 14px;
+    right: -18px;
+    transform-origin: bottom center;
+    animation: saberSwing 0.8s ease-in-out infinite alternate;
+    z-index: 4;
+}
+
+@keyframes saberSwing {
+    0%   { transform: rotate(-40deg); }
+    100% { transform: rotate(30deg); }
+}
+
+.yoda-saber-hilt {
+    width: 6px;
+    height: 18px;
+    background: linear-gradient(180deg, #bbb, #777);
+    border-radius: 2px;
+    margin: 0 auto;
+}
+
+.yoda-saber-blade {
+    width: 4px;
+    height: 50px;
+    background: linear-gradient(180deg, rgba(100, 255, 100, 0.95), rgba(60, 200, 60, 0.6));
+    border-radius: 2px 2px 1px 1px;
+    margin: 0 auto;
+    box-shadow:
+        0 0 8px rgba(100, 255, 100, 0.6),
+        0 0 20px rgba(100, 255, 100, 0.3),
+        0 0 40px rgba(100, 255, 100, 0.15);
+    animation: saberGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes saberGlow {
+    0%, 100% { box-shadow: 0 0 8px rgba(100,255,100,0.6), 0 0 20px rgba(100,255,100,0.3), 0 0 40px rgba(100,255,100,0.15); }
+    50%      { box-shadow: 0 0 14px rgba(100,255,100,0.8), 0 0 30px rgba(100,255,100,0.5), 0 0 60px rgba(100,255,100,0.25); }
+}
+
+/* ── Legs ── */
+.yoda-leg {
+    position: absolute;
+    bottom: -18px;
+    width: 10px;
+    height: 24px;
+    background: #4d7a33;
+    border-radius: 4px;
+    z-index: 1;
+}
+
+.yoda-leg--left {
+    left: 18px;
+    transform-origin: top center;
+    animation: legDanceL 0.4s ease-in-out infinite alternate;
+}
+
+.yoda-leg--right {
+    right: 18px;
+    transform-origin: top center;
+    animation: legDanceR 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes legDanceL {
+    0%   { transform: rotate(10deg); }
+    100% { transform: rotate(-12deg); }
+}
+
+@keyframes legDanceR {
+    0%   { transform: rotate(-10deg); }
+    100% { transform: rotate(12deg); }
+}
+
+/* ── Ground glow — green reflection ── */
+.yoda-ground-glow {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 20px;
+    background: radial-gradient(ellipse at center, rgba(100, 255, 100, 0.15) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: groundPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes groundPulse {
+    0%, 100% { opacity: 0.5; transform: translateX(-50%) scaleX(1); }
+    50%      { opacity: 1; transform: translateX(-50%) scaleX(1.3); }
+}
+
 
 /* Main content is invisible until loading finishes */
 #main-content {
@@ -474,18 +713,19 @@ body.loaded .hero-marquee {
     margin-top: -80px;
     padding-top: 80px;
     background: linear-gradient(180deg, #070709 0%, #040405 40%, #020203 100%);
-    overflow: hidden;
 }
 
+/* Starfield canvas — FIXED so it stays static behind scrolling content */
 #starfield {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: 100vh;
     z-index: 0;
     pointer-events: none;
 }
+
 
 /* ══════════════════════════════════════
    ABOUT SECTION
@@ -501,24 +741,168 @@ body.loaded .hero-marquee {
     padding: 120px 8%;
     color: #e0e0e0;
     overflow: hidden;
+    scroll-margin-top: 80px;
 }
 
-.about-container {
+/* ── Two-column wrapper ── */
+.about-inner {
     position: relative;
     z-index: 2;
-    max-width: 600px;
+    width: 100%;
+    max-width: 1100px;
+    display: flex;
+    align-items: center;
+    gap: 64px;
+}
+
+/* ── LEFT: stacked role cards ── */
+.about-cards {
+    flex: 0 0 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.role-card {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    padding: 22px 24px;
     background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    padding: 55px;
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow:
-        0 0 60px rgba(255, 255, 255, 0.02),
-        0 20px 50px rgba(0, 0, 0, 0.5);
-    transform: translateY(30px);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 16px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    overflow: hidden;
+    transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;
     opacity: 0;
-    animation: fadeUp 1s ease forwards 0.5s;
+    transform: translateX(-24px);
+    animation: cardSlideIn 0.7s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+}
+
+#card-frontend { animation-delay: 0.3s; }
+#card-backend   { animation-delay: 0.5s; }
+#card-genai     { animation-delay: 0.7s; }
+
+@keyframes cardSlideIn {
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.role-card:hover {
+    background: rgba(255, 255, 255, 0.055);
+    border-color: rgba(255, 255, 255, 0.14);
+    transform: translateX(5px);
+}
+
+/* GenAI card — subtle ambient glow + dashed border */
+.role-card--target {
+    border-color: rgba(160, 130, 255, 0.25);
+    background: rgba(140, 100, 255, 0.04);
+}
+
+.role-card--target:hover {
+    border-color: rgba(160, 130, 255, 0.45);
+    background: rgba(140, 100, 255, 0.08);
+}
+
+/* Animated glow blob behind the GenAI card */
+.role-card-glow {
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    background: radial-gradient(ellipse at 70% 50%, rgba(140, 100, 255, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+    animation: glowPulse 3s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+    0%, 100% { opacity: 0.6; }
+    50%       { opacity: 1; }
+}
+
+/* Icon circle */
+.role-card-icon {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.7);
+    transition: color 0.3s ease, background 0.3s ease;
+}
+
+.role-card--target .role-card-icon {
+    color: rgba(180, 150, 255, 0.85);
+    background: rgba(140, 100, 255, 0.1);
+    border-color: rgba(160, 130, 255, 0.2);
+}
+
+.role-card:hover .role-card-icon {
+    color: #fff;
+}
+
+/* Text */
+.role-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+    z-index: 1;
+}
+
+.role-card-label {
+    font-size: 0.7rem;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.35);
+    font-weight: 500;
+}
+
+.role-card--target .role-card-label {
+    color: rgba(180, 150, 255, 0.65);
+}
+
+.role-card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.2px;
+    margin: 0;
+}
+
+.role-card-desc {
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: 300;
+    margin: 0;
+}
+
+/* ── RIGHT: Bio ── */
+.about-bio {
+    flex: 1;
+    opacity: 0;
+    transform: translateY(24px);
+    animation: fadeUp 0.9s ease forwards 0.5s;
+}
+
+.about-bio-tagline {
+    font-size: 0.8rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.about-bio-title {
+    /* override default section-title margin for this context */
+    margin-bottom: 28px !important;
 }
 
 .section-title {
@@ -542,10 +926,10 @@ body.loaded .hero-marquee {
 }
 
 .about-content p {
-    font-size: 1.1rem;
-    line-height: 1.85;
+    font-size: 1.05rem;
+    line-height: 1.9;
     margin-bottom: 20px;
-    color: rgba(255, 255, 255, 0.65);
+    color: rgba(255, 255, 255, 0.6);
     font-weight: 300;
 }
 
@@ -556,16 +940,30 @@ body.loaded .hero-marquee {
     }
 }
 
+/* ── Responsive ── */
+@media (max-width: 900px) {
+    .about-inner {
+        flex-direction: column;
+        gap: 40px;
+    }
+
+    .about-cards {
+        flex: none;
+        width: 100%;
+    }
+}
+
 @media (max-width: 768px) {
     .about-section {
         padding: 100px 5%;
     }
 
-    .about-container {
-        padding: 32px;
-        max-width: 100%;
+    .about-content p {
+        font-size: 0.95rem;
     }
 }
+
+
 
 /* ══════════════════════════════════════
    SKILLS SECTION (ORBITAL CONCENTRIC DESIGN)
@@ -574,15 +972,19 @@ body.loaded .hero-marquee {
     position: relative;
     z-index: 2;
     width: 100%;
-    min-height: 120vh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 120px 8% 160px 8%;
+    /* Enough top space for the fixed navbar (~80px), tight bottom */
+    padding: 90px 8% 40px 8%;
     color: #e0e0e0;
     overflow: hidden;
+    /* Offset anchor scroll so the fixed navbar doesn't overlap the heading */
+    scroll-margin-top: 80px;
 }
+
 
 .skills-header {
     width: 100%;
@@ -612,16 +1014,17 @@ body.loaded .hero-marquee {
 
 .skills-orbit-container {
     position: relative;
-    width: 800px;
-    height: 700px;
-    margin: 60px auto 0 auto;
+    width: min(800px, 95vw);
+    /* Enough height to clear the outermost icon row (radius 260px × 2 + badge height ~100px) */
+    height: min(580px, 62vh);
+    margin: 24px auto 0 auto;
     z-index: 3;
     /* Concentric faint orbital guides behind the icons */
     background: 
-        radial-gradient(circle at 50% 50%, transparent 129px, rgba(255, 255, 255, 0.015) 130px, transparent 131px), /* Row 3 (radius 130px) */
-        radial-gradient(circle at 50% 50%, transparent 149px, rgba(255, 255, 255, 0.015) 150px, transparent 151px), /* Row 4 (radius 150px) */
-        radial-gradient(circle at 50% 50%, transparent 194px, rgba(255, 255, 255, 0.015) 195px, transparent 196px), /* Row 2 (radius 195px) */
-        radial-gradient(circle at 50% 50%, transparent 259px, rgba(255, 255, 255, 0.01) 260px, transparent 261px);  /* Row 1 (radius 260px) */
+        radial-gradient(circle at 50% 50%, transparent 129px, rgba(255, 255, 255, 0.015) 130px, transparent 131px),
+        radial-gradient(circle at 50% 50%, transparent 149px, rgba(255, 255, 255, 0.015) 150px, transparent 151px),
+        radial-gradient(circle at 50% 50%, transparent 194px, rgba(255, 255, 255, 0.015) 195px, transparent 196px),
+        radial-gradient(circle at 50% 50%, transparent 259px, rgba(255, 255, 255, 0.01) 260px, transparent 261px);
 }
 
 /* Center placeholder to align the canvas-drawn black hole */
