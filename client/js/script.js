@@ -291,6 +291,91 @@
 })();
 
 /* ══════════════════════════════════════
+   PROJECTS — Fetch & Render
+   ══════════════════════════════════════ */
+(function () {
+    const API_BASE = window.location.protocol === 'file:'
+        ? null
+        : window.location.origin + '/api';
+
+    const grid = document.getElementById('projects-grid');
+    if (!grid || !API_BASE) return;
+
+    const githubSVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>`;
+    const externalSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
+
+    function renderProjectCard(p) {
+        const imageHTML = p.image
+            ? `<img class="project-card-image" src="${p.image}" alt="${p.title}" loading="lazy">`
+            : `<div class="project-card-image-placeholder">💻</div>`;
+
+        const tagsHTML = (p.tags || [])
+            .map(t => `<span>${t}</span>`)
+            .join('');
+
+        const linksHTML = [
+            p.github ? `<a href="${p.github}" target="_blank" rel="noopener">${githubSVG} GitHub</a>` : '',
+            p.demo ? `<a href="${p.demo}" target="_blank" rel="noopener">${externalSVG} Live Demo</a>` : '',
+        ].filter(Boolean).join('');
+
+        return `
+            <article class="project-card">
+                ${imageHTML}
+                <div class="project-card-body">
+                    <h3 class="project-card-title">${p.title}</h3>
+                    <p class="project-card-desc">${p.description}</p>
+                    ${tagsHTML ? `<div class="project-card-tags">${tagsHTML}</div>` : ''}
+                    ${linksHTML ? `<div class="project-card-links">${linksHTML}</div>` : ''}
+                </div>
+            </article>
+        `;
+    }
+
+    async function loadProjects() {
+        try {
+            const res = await fetch(`${API_BASE}/projects`);
+            if (!res.ok) throw new Error('API error');
+            const projects = await res.json();
+
+            if (!projects.length) {
+                grid.innerHTML = '<p class="projects-empty">No projects yet.</p>';
+                return;
+            }
+
+            grid.innerHTML = projects.map(renderProjectCard).join('');
+
+            // Fade-in animation on scroll
+            const cards = grid.querySelectorAll('.project-card');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            cards.forEach((card, i) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                card.style.transition = `opacity 0.5s ease ${i * 0.1}s, transform 0.5s ease ${i * 0.1}s`;
+                observer.observe(card);
+            });
+
+        } catch (err) {
+            console.warn('Projects API unavailable.');
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadProjects);
+    } else {
+        loadProjects();
+    }
+})();
+
+/* ══════════════════════════════════════
    SCROLL-DRIVEN MARQUEE
    ══════════════════════════════════════ */
 (function () {

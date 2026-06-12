@@ -107,6 +107,29 @@ a { text-decoration: none; color: inherit; }
     border-color: rgba(255, 60, 60, 0.35);
 }
 
+.btn-edit {
+    background: rgba(100, 160, 255, 0.06);
+    color: #6ea8ff;
+    border: 1px solid rgba(100, 160, 255, 0.12);
+    padding: 5px 12px;
+    font-size: 0.72rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+    transition: all 0.25s ease;
+}
+
+.btn-edit:hover {
+    background: rgba(100, 160, 255, 0.15);
+    border-color: rgba(100, 160, 255, 0.35);
+}
+
+.item-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
 /* ══════════════════════════════════════
    LOGIN SCREEN
    ══════════════════════════════════════ */

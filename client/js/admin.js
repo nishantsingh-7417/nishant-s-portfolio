@@ -116,7 +116,10 @@
                 </div>
                 <h4>${s.name}</h4>
                 <p class="item-meta">Row ${s.row} · ${s.angle}° · ${s.radius}px</p>
-                <button class="btn-delete" onclick="deleteSkill(${s.id})">Delete</button>
+                <div class="item-card-actions">
+                    <button class="btn-edit" onclick="editSkill(${s.id})">Edit</button>
+                    <button class="btn-delete" onclick="deleteSkill(${s.id})">Delete</button>
+                </div>
             </div>
         `
             )
@@ -146,15 +149,61 @@
         }
     };
 
+    // Edit skill — populate form with existing data
+    window.editSkill = function (id) {
+        // Find the skill from the rendered cards
+        const card = skillsList.querySelector(`[data-id="${id}"]`);
+        if (!card) return;
+
+        // Fetch current data from API
+        fetch(`${API_BASE}/skills`)
+            .then(r => r.json())
+            .then(skills => {
+                const s = skills.find(sk => sk.id === id);
+                if (!s) return;
+
+                document.getElementById('skill-name').value = s.name;
+                document.getElementById('skill-icon').value = s.icon;
+                document.getElementById('skill-row').value = s.row;
+                document.getElementById('skill-angle').value = s.angle;
+                document.getElementById('skill-radius').value = s.radius;
+                document.getElementById('skill-filter').value = s.filter || '';
+
+                addSkillForm.classList.remove('hidden');
+                addSkillForm.setAttribute('data-edit-id', id);
+                addSkillForm.querySelector('h3').textContent = 'Edit Skill';
+                saveSkillBtn.textContent = 'Update Skill';
+            });
+    };
+
+    function clearSkillForm() {
+        document.getElementById('skill-name').value = '';
+        document.getElementById('skill-icon').value = '';
+        document.getElementById('skill-row').value = '1';
+        document.getElementById('skill-angle').value = '0';
+        document.getElementById('skill-radius').value = '200';
+        document.getElementById('skill-filter').value = '';
+        addSkillForm.removeAttribute('data-edit-id');
+        addSkillForm.querySelector('h3').textContent = 'Add New Skill';
+        saveSkillBtn.textContent = 'Save Skill';
+    }
+
     // Toggle add form
     toggleAddSkill.addEventListener('click', () => {
-        addSkillForm.classList.toggle('hidden');
+        if (!addSkillForm.classList.contains('hidden')) {
+            addSkillForm.classList.add('hidden');
+            clearSkillForm();
+        } else {
+            clearSkillForm();
+            addSkillForm.classList.remove('hidden');
+        }
     });
     cancelSkillBtn.addEventListener('click', () => {
         addSkillForm.classList.add('hidden');
+        clearSkillForm();
     });
 
-    // Save skill
+    // Save skill (create or update)
     saveSkillBtn.addEventListener('click', async () => {
         const name = document.getElementById('skill-name').value.trim();
         const icon = document.getElementById('skill-icon').value.trim();
@@ -168,9 +217,14 @@
             return;
         }
 
+        const editId = addSkillForm.getAttribute('data-edit-id');
+        const isEdit = !!editId;
+        const url = isEdit ? `${API_BASE}/skills/${editId}` : `${API_BASE}/skills`;
+        const method = isEdit ? 'PUT' : 'POST';
+
         try {
-            const res = await fetch(`${API_BASE}/skills`, {
-                method: 'POST',
+            const res = await fetch(url, {
+                method,
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${authToken}`,
@@ -184,17 +238,9 @@
                 return;
             }
 
-            showToast('Skill added!');
+            showToast(isEdit ? 'Skill updated!' : 'Skill added!');
             addSkillForm.classList.add('hidden');
-
-            // Clear form
-            document.getElementById('skill-name').value = '';
-            document.getElementById('skill-icon').value = '';
-            document.getElementById('skill-row').value = '1';
-            document.getElementById('skill-angle').value = '0';
-            document.getElementById('skill-radius').value = '200';
-            document.getElementById('skill-filter').value = '';
-
+            clearSkillForm();
             loadSkills();
         } catch (err) {
             showToast('Server error.', 'error');
@@ -237,7 +283,10 @@
                         ${p.demo ? `<a href="${p.demo}" target="_blank">Live Demo ↗</a>` : ''}
                     </div>
                 </div>
-                <button class="btn-delete" onclick="deleteProject(${p.id})">Delete</button>
+                <div class="item-card-actions">
+                    <button class="btn-edit" onclick="editProject(${p.id})">Edit</button>
+                    <button class="btn-delete" onclick="deleteProject(${p.id})">Delete</button>
+                </div>
             </div>
         `
             )
@@ -266,15 +315,58 @@
         }
     };
 
+    // Edit project — populate form with existing data
+    window.editProject = async function (id) {
+        try {
+            const res = await fetch(`${API_BASE}/projects`);
+            const projects = await res.json();
+            const p = projects.find(proj => proj.id === id);
+            if (!p) return;
+
+            document.getElementById('project-title').value = p.title;
+            document.getElementById('project-desc').value = p.description;
+            document.getElementById('project-image').value = p.image || '';
+            document.getElementById('project-tags').value = (p.tags || []).join(', ');
+            document.getElementById('project-github').value = p.github || '';
+            document.getElementById('project-demo').value = p.demo || '';
+
+            addProjectForm.classList.remove('hidden');
+            addProjectForm.setAttribute('data-edit-id', id);
+            addProjectForm.querySelector('h3').textContent = 'Edit Project';
+            saveProjectBtn.textContent = 'Update Project';
+        } catch (err) {
+            showToast('Failed to load project data.', 'error');
+        }
+    };
+
+    function clearProjectForm() {
+        document.getElementById('project-title').value = '';
+        document.getElementById('project-desc').value = '';
+        document.getElementById('project-image').value = '';
+        document.getElementById('project-tags').value = '';
+        document.getElementById('project-github').value = '';
+        document.getElementById('project-demo').value = '';
+        addProjectForm.removeAttribute('data-edit-id');
+        addProjectForm.querySelector('h3').textContent = 'Add New Project';
+        saveProjectBtn.textContent = 'Save Project';
+    }
+
     // Toggle add form
     toggleAddProject.addEventListener('click', () => {
-        addProjectForm.classList.toggle('hidden');
+        if (!addProjectForm.classList.contains('hidden')) {
+            addProjectForm.classList.add('hidden');
+            clearProjectForm();
+        } else {
+            clearProjectForm();
+            addProjectForm.classList.remove('hidden');
+        }
     });
     cancelProjectBtn.addEventListener('click', () => {
         addProjectForm.classList.add('hidden');
+        clearProjectForm();
     });
 
-    // Save project
+    // Save project (create or update)
     saveProjectBtn.addEventListener('click', async () => {
         const title = document.getElementById('project-title').value.trim();
         const description = document.getElementById('project-desc').value.trim();
@@ -292,9 +384,14 @@
             ? tagsRaw.split(',').map((t) => t.trim()).filter(Boolean)
             : [];
 
+        const editId = addProjectForm.getAttribute('data-edit-id');
+        const isEdit = !!editId;
+        const url = isEdit ? `${API_BASE}/projects/${editId}` : `${API_BASE}/projects`;
+        const method = isEdit ? 'PUT' : 'POST';
+
         try {
-            const res = await fetch(`${API_BASE}/projects`, {
-                method: 'POST',
+            const res = await fetch(url, {
+                method,
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${authToken}`,
@@ -308,17 +405,9 @@
                 return;
             }
 
-            showToast('Project added!');
+            showToast(isEdit ? 'Project updated!' : 'Project added!');
             addProjectForm.classList.add('hidden');
-
-            // Clear form
-            document.getElementById('project-title').value = '';
-            document.getElementById('project-desc').value = '';
-            document.getElementById('project-image').value = '';
-            document.getElementById('project-tags').value = '';
-            document.getElementById('project-github').value = '';
-            document.getElementById('project-demo').value = '';
-
+            clearProjectForm();
             loadProjects();
         } catch (err) {
             showToast('Server error.', 'error');
