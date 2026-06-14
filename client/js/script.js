@@ -213,19 +213,15 @@
                 const y = e.clientY - rect.top - rect.height / 2;
 
                 const pull = 0.35;
-                const tx = item.style.getPropertyValue('--tx') || '0px';
-                const ty = item.style.getPropertyValue('--ty') || '0px';
-
-                item.style.transform = `translate(-50%, -50%) translate(${tx}, ${ty}) translate(${x * pull}px, ${y * pull}px) scale(1.15)`;
+                item.style.transition = 'transform 0.12s cubic-bezier(0.25, 1, 0.5, 1)';
+                item.style.transform = `translate(${x * pull}px, ${y * pull}px) scale(1.15)`;
             });
 
             item.addEventListener('mouseleave', () => {
                 if (window.innerWidth <= 768) return;
 
-                const tx = item.style.getPropertyValue('--tx') || '0px';
-                const ty = item.style.getPropertyValue('--ty') || '0px';
-
-                item.style.transform = `translate(-50%, -50%) translate(${tx}, ${ty}) scale(1)`;
+                item.style.transition = 'transform 0.3s ease';
+                item.style.transform = `translate(0px, 0px) scale(1)`;
             });
         });
     }
@@ -234,23 +230,21 @@
         if (window.innerWidth <= 768) return;
 
         items.forEach((item, index) => {
-            const angle = parseFloat(item.getAttribute('data-angle'));
-            const radius = parseFloat(item.getAttribute('data-radius'));
-            const angleRad = (angle * Math.PI) / 180;
-
-            const tx = Math.cos(angleRad) * radius;
-            const ty = Math.sin(angleRad) * radius;
-
-            item.style.setProperty('--tx', '0px');
-            item.style.setProperty('--ty', '0px');
-            item.style.setProperty('--scale', '0');
-            item.style.setProperty('--opacity', '0');
-
+            item.style.opacity = '0';
+            item.style.transform = 'translateY(30px) scale(0.8)';
+            
             setTimeout(() => {
-                item.style.setProperty('--tx', `${tx}px`);
-                item.style.setProperty('--ty', `${ty}px`);
-                item.style.setProperty('--scale', '1');
-                item.style.setProperty('--opacity', '1');
+                item.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.6s ease';
+                item.style.opacity = '1';
+                item.style.transform = 'translateY(0px) scale(1)';
+                
+                // Cleanup transition after entrance to not interfere with hover
+                setTimeout(() => {
+                    if (item.style.transform === 'translateY(0px) scale(1)') {
+                        item.style.transition = '';
+                        item.style.transform = '';
+                    }
+                }, 600);
             }, index * 60);
         });
     }
@@ -266,11 +260,26 @@
                 const res = await fetch(`${API_BASE}/skills`);
                 if (res.ok) {
                     const skills = await res.json();
-                    container.querySelectorAll('.skill-item').forEach(el => el.remove());
+                    container.querySelectorAll('.skill-row, .skill-item').forEach(el => el.remove());
+                    
+                    // Group by row
+                    const rows = {};
                     skills.forEach(skill => {
-                        const el = createSkillElement(skill);
-                        container.appendChild(el);
+                        const rowNum = skill.row || 1;
+                        if (!rows[rowNum]) rows[rowNum] = [];
+                        rows[rowNum].push(skill);
                     });
+
+                    Object.keys(rows).sort((a, b) => a - b).forEach(rowNum => {
+                        const rowDiv = document.createElement('div');
+                        rowDiv.className = 'skill-row';
+                        rows[rowNum].forEach(skill => {
+                            const el = createSkillElement(skill);
+                            rowDiv.appendChild(el);
+                        });
+                        container.appendChild(rowDiv);
+                    });
+                    
                     items = container.querySelectorAll('.skill-item');
                 }
             } catch (err) {
