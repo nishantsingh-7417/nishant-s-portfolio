@@ -494,3 +494,65 @@
     animate();
 })();
 
+/* ══════════════════════════════════════
+   CONTACT FORM HANDLER
+   ══════════════════════════════════════ */
+(function() {
+    const form = document.getElementById('contact-form');
+    const status = document.getElementById('form-status');
+    const submitBtn = document.getElementById('contact-submit-btn');
+
+    if (!form || !status || !submitBtn) return;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Show loading state
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span>Sending...</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+        submitBtn.style.opacity = '0.7';
+        submitBtn.style.pointerEvents = 'none';
+
+        const name = document.getElementById('name').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const message = document.getElementById('message').value.trim();
+
+        const API_BASE = window.location.protocol === 'file:'
+            ? null
+            : window.location.origin + '/api';
+
+        try {
+            if (!API_BASE) throw new Error('Cannot send message over file:// protocol.');
+
+            const res = await fetch(`${API_BASE}/messages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, message })
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to send message.');
+            }
+
+            // Show success message
+            status.textContent = "Message sent successfully! I'll get back to you soon.";
+            status.style.color = "rgba(100, 255, 100, 0.9)";
+            form.reset();
+
+        } catch (err) {
+            status.textContent = err.message || "An error occurred while sending the message.";
+            status.style.color = "rgba(255, 100, 100, 0.9)";
+        } finally {
+            // Restore button
+            submitBtn.innerHTML = originalText;
+            submitBtn.style.opacity = '1';
+            submitBtn.style.pointerEvents = 'auto';
+
+            // Hide message after a few seconds
+            setTimeout(() => {
+                status.textContent = "";
+            }, 5000);
+        }
+    });
+})();

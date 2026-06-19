@@ -461,6 +461,56 @@ app.delete('/api/blogs/:id', authenticateToken, (req, res) => {
     writeData(data);
     res.json({ message: 'Blog deleted.', blog: removed[0] });
 });
+// ══════════════════════════════════════
+//  MESSAGES API (Contact Form)
+// ══════════════════════════════════════
+
+// GET all messages (admin only)
+app.get('/api/messages', authenticateToken, (req, res) => {
+    const data = readData();
+    res.json(data.messages || []);
+});
+
+// POST add a new message (public)
+app.post('/api/messages', (req, res) => {
+    const { name, email, message } = req.body;
+
+    if (!name || !email || !message) {
+        return res.status(400).json({ error: 'Name, email, and message are required.' });
+    }
+
+    const data = readData();
+    if (!data.messages) data.messages = [];
+    const maxId = data.messages.reduce((max, m) => Math.max(max, m.id || 0), 0);
+
+    const newMessage = {
+        id: maxId + 1,
+        name,
+        email,
+        message,
+        createdAt: new Date().toISOString()
+    };
+
+    data.messages.push(newMessage);
+    writeData(data);
+    res.status(201).json({ message: 'Message sent successfully!' });
+});
+
+// DELETE remove a message (admin only)
+app.delete('/api/messages/:id', authenticateToken, (req, res) => {
+    const id = parseInt(req.params.id);
+    const data = readData();
+    if (!data.messages) data.messages = [];
+    const index = data.messages.findIndex((m) => m.id === id);
+
+    if (index === -1) {
+        return res.status(404).json({ error: 'Message not found.' });
+    }
+
+    const removed = data.messages.splice(index, 1);
+    writeData(data);
+    res.json({ message: 'Message deleted.', deleted: removed[0] });
+});
 
 // ── Start server ──
 app.listen(PORT, () => {

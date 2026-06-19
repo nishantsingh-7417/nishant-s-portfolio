@@ -147,6 +147,7 @@
             loadProjects();
             loadResume();
             loadBlogs();
+            loadMessages();
         } else {
             // Clear invalid/expired token
             if (authToken) {
@@ -868,6 +869,62 @@
             }
         });
     }
+
+    // ══════════════════════════════════════
+    //  MESSAGES CRUD
+    // ══════════════════════════════════════
+    const messagesList = document.getElementById('messages-list');
+
+    async function loadMessages() {
+        if (!messagesList) return;
+        try {
+            const res = await fetchWithAuth(`${API_BASE}/messages`);
+            const messages = await res.json();
+            renderMessages(messages);
+        } catch (err) {
+            messagesList.innerHTML = '<p class="loading-text">Failed to load messages.</p>';
+        }
+    }
+
+    function renderMessages(messages) {
+        if (!messagesList) return;
+        if (!messages.length) {
+            messagesList.innerHTML = '<p class="loading-text">No messages yet.</p>';
+            return;
+        }
+
+        // Sort messages descending by createdAt (newest first)
+        messages.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        messagesList.innerHTML = messages.map((m) => `
+            <div class="item-card project-item-card" data-id="${m.id}">
+                <div class="project-info">
+                    <h4>${m.name} <span style="font-size: 0.9em; font-weight: normal; color: #a0aec0;">(<a href="mailto:${m.email}" style="color: inherit; text-decoration: underline;">${m.email}</a>)</span></h4>
+                    <p class="project-desc" style="white-space: pre-wrap; margin-top: 10px;">${m.message}</p>
+                    <p class="project-desc" style="font-size: 0.8em; margin-top: 10px; color: #718096;">Received: ${new Date(m.createdAt).toLocaleString()}</p>
+                </div>
+                <div class="item-card-actions">
+                    <button class="btn-delete" onclick="deleteMessage(${m.id})">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    window.deleteMessage = async function (id) {
+        if (!confirm('Delete this message?')) return;
+        try {
+            const res = await fetchWithAuth(`${API_BASE}/messages/${id}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const data = await res.json();
+                showToast(data.error || 'Delete failed.', 'error');
+                return;
+            }
+            showToast('Message deleted.');
+            loadMessages();
+        } catch (err) {
+            if (err.message !== 'TOKEN_EXPIRED') showToast('Server error.', 'error');
+        }
+    };
 
     // ── Init ──
     checkAuth();
