@@ -1,9 +1,9 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
-const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,6 +15,8 @@ app.use(express.json());
 
 // Serve the client folder as static files
 app.use(express.static(path.join(__dirname, '..', 'client')));
+// Serve uploads folder as static files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ══════════════════════════════════════
 //  DATA HELPERS (JSON file as database)
@@ -73,6 +75,11 @@ app.post('/api/admin/login', (req, res) => {
     });
 
     res.json({ message: 'Login successful.', token });
+});
+
+// Verify token validity (used by admin dashboard on page load)
+app.get('/api/admin/verify', authenticateToken, (req, res) => {
+    res.json({ valid: true, role: req.admin.role });
 });
 
 // ══════════════════════════════════════
@@ -343,6 +350,116 @@ app.delete('/api/resume', authenticateToken, (req, res) => {
     delete data.resume;
     writeData(data);
     res.json({ message: 'Resume deleted.' });
+});
+
+// ══════════════════════════════════════
+//  IMAGE UPLOAD API
+// ══════════════════════════════════════
+const uploadImageConfig = multer({
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => cb(null, UPLOADS_DIR),
+        filename: (req, file, cb) => {
+            const ext = path.extname(file.originalname).toLowerCase();
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            cb(null, `img-${uniqueSuffix}${ext}`);
+        }
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only images are allowed.'));
+        }
+    }
+});
+
+app.post('/api/upload', authenticateToken, (req, res) => {
+    uploadImageConfig.single('image')(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+            return res.status(400).json({ error: err.message });
+        } else if (err) {
+            return res.status(400).json({ error: err.message });
+        }
+        if (!req.file) {
+            return res.status(400).json({ error: 'No image uploaded.' });
+        }
+        res.json({ url: `/uploads/${req.file.filename}` });
+    });
+});
+
+// ══════════════════════════════════════
+//  BLOGS API (Manual backend)
+// ══════════════════════════════════════
+
+// GET all blogs (public)
+app.get('/api/blogs', (req, res) => {
+    const data = readData();
+    // Return wrapped in posts array to keep frontend somewhat compatible 
+    // although we will update frontend next.
+    res.json({ posts: data.blogs || [] });
+});
+
+// POST add a new blog (admin only)
+app.post('/api/blogs', authenticateToken, (req, res) => {
+    const { title, description, link } = req.body;
+
+    if (!title || !description || !link) {
+        return res
+            .status(400)
+            .json({ error: 'Title, description, and link are required.' });
+    }
+
+    const data = readData();
+    if (!data.blogs) data.blogs = [];
+    const maxId = data.blogs.reduce((max, b) => Math.max(max, b.id || 0), 0);
+
+    const newBlog = {
+        id: maxId + 1,
+        title,
+        description,
+        link,
+    };
+
+    data.blogs.push(newBlog);
+    writeData(data);
+    res.status(201).json(newBlog);
+});
+
+// PUT update a blog (admin only)
+app.put('/api/blogs/:id', authenticateToken, (req, res) => {
+    const id = parseInt(req.params.id);
+    const data = readData();
+    if (!data.blogs) data.blogs = [];
+    const index = data.blogs.findIndex((b) => b.id === id);
+
+    if (index === -1) {
+        return res.status(404).json({ error: 'Blog not found.' });
+    }
+
+    const { title, description, link } = req.body;
+    if (title !== undefined) data.blogs[index].title = title;
+    if (description !== undefined) data.blogs[index].description = description;
+    if (link !== undefined) data.blogs[index].link = link;
+
+    writeData(data);
+    res.json(data.blogs[index]);
+});
+
+// DELETE remove a blog (admin only)
+app.delete('/api/blogs/:id', authenticateToken, (req, res) => {
+    const id = parseInt(req.params.id);
+    const data = readData();
+    if (!data.blogs) data.blogs = [];
+    const index = data.blogs.findIndex((b) => b.id === id);
+
+    if (index === -1) {
+        return res.status(404).json({ error: 'Blog not found.' });
+    }
+
+    const removed = data.blogs.splice(index, 1);
+    writeData(data);
+    res.json({ message: 'Blog deleted.', blog: removed[0] });
 });
 
 // ── Start server ──

@@ -44,9 +44,6 @@
     <!-- ── Main Content (hidden until loading completes) ── -->
     <div id="main-content">
         <section class="hero-section">
-            <video class="hero-video" autoplay muted loop playsinline>
-                <source src="./assets/images/hero-section.mp4" type="video/mp4">
-            </video>
 
             <nav id="navbar">
                 <div id="name">[N]ishant</div>
@@ -176,7 +173,24 @@
                 </div>
             </section>
 
-            <!-- Future sections (Blogs, Contact) go here -->
+            <!-- ═══ Blogs Section ═══ -->
+            <section id="blogs" class="blogs-section">
+                <div class="blogs-header">
+                    <p class="blogs-tagline">WRITING</p>
+                    <h2 class="section-title-large">Blogs.</h2>
+                </div>
+                <div id="blogs-grid" class="blogs-grid">
+                    <!-- Populated dynamically from /api/blogs (Hashnode) -->
+                </div>
+                <div class="blogs-footer" id="blogs-footer" style="display:none;">
+                    <a href="https://nishantcode.hashnode.dev" target="_blank" rel="noopener" class="blogs-view-all" id="blogs-view-all">
+                        View All on Hashnode
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </a>
+                </div>
+            </section>
+
+            <!-- Future sections (Contact) go here -->
 
 
         </div>

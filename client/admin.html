@@ -138,8 +138,10 @@
                             <textarea id="project-desc" rows="3" placeholder="Brief description of the project..." required></textarea>
                         </div>
                         <div class="input-group">
-                            <label for="project-image">Image URL</label>
-                            <input type="text" id="project-image" placeholder="https://...">
+                            <label for="project-image-file">Project Image Upload</label>
+                            <input type="file" id="project-image-file" accept="image/*">
+                            <input type="hidden" id="project-image-url">
+                            <img id="project-image-preview" src="" alt="Preview" style="max-width:100%; margin-top:10px; display:none; border-radius:4px; max-height:200px; object-fit:cover;">
                         </div>
                         <div class="input-group">
                             <label for="project-tags">Tags (comma separated)</label>
@@ -163,6 +165,45 @@
                 <!-- Projects List -->
                 <div id="projects-list" class="items-grid">
                     <p class="loading-text">Loading projects...</p>
+                </div>
+            </section>
+
+            <!-- ═══ Blogs Management ═══ -->
+            <section class="dash-section">
+                <div class="section-head">
+                    <h2>Blogs</h2>
+                    <button id="add-blog-btn" class="btn btn-primary">+ Add Blog</button>
+                </div>
+
+                <!-- Blog Form (hidden by default) -->
+                <div id="blog-form-container" class="form-container hidden">
+                    <h3 id="blog-form-title">Add New Blog</h3>
+                    <input type="hidden" id="blog-id">
+
+                    <div class="input-group">
+                        <label for="blog-title">Topic Title</label>
+                        <input type="text" id="blog-title" placeholder="e.g., JavaScript Operators">
+                    </div>
+
+                    <div class="input-group">
+                        <label for="blog-link">Link (URL)</label>
+                        <input type="text" id="blog-link" placeholder="e.g., https://nishantcode.hashnode.dev/...">
+                    </div>
+
+                    <div class="input-group">
+                        <label for="blog-description">Description</label>
+                        <textarea id="blog-description" rows="3" placeholder="Brief description of the blog..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button id="save-blog-btn" class="btn btn-primary">Save Blog</button>
+                        <button id="cancel-blog-btn" class="btn btn-ghost">Cancel</button>
+                    </div>
+                </div>
+
+                <!-- Blogs List -->
+                <div id="blogs-list" class="items-grid">
+                    <p class="loading-text">Loading blogs...</p>
                 </div>
             </section>
         </main>

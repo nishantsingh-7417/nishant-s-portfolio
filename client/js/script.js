@@ -376,6 +376,77 @@
 })();
 
 /* ══════════════════════════════════════
+   BLOGS — Fetch & Render (Manual from Backend)
+   ══════════════════════════════════════ */
+(function () {
+    const API_BASE = window.location.protocol === 'file:'
+        ? null
+        : window.location.origin + '/api';
+
+    const grid = document.getElementById('blogs-grid');
+    if (!grid || !API_BASE) return;
+
+    const arrowSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`;
+
+    function renderBlogCard(post) {
+        return `
+            <a href="${post.link || '#'}" target="_blank" rel="noopener" class="blog-card" style="min-height: 200px;">
+                <div class="blog-card-body" style="padding-top: 36px; padding-bottom: 36px;">
+                    <h3 class="blog-card-title" style="font-size: 1.4rem; margin-bottom: 16px;">${post.title}</h3>
+                    <p class="blog-card-brief" style="-webkit-line-clamp: 4;">${post.description}</p>
+                    <div class="blog-card-read" style="margin-top: auto; border-top: none; padding-top: 10px;">
+                        Read Article ${arrowSVG}
+                    </div>
+                </div>
+            </a>
+        `;
+    }
+
+    async function loadBlogs() {
+        try {
+            const res = await fetch(`${API_BASE}/blogs`);
+            if (!res.ok) throw new Error('API error');
+            const data = await res.json();
+
+            if (!data.posts || !data.posts.length) {
+                grid.innerHTML = '<p class="blogs-empty">No blog posts yet — check back soon!</p>';
+                return;
+            }
+
+            grid.innerHTML = data.posts.map(renderBlogCard).join('');
+
+            // Staggered scroll-reveal animation
+            const cards = grid.querySelectorAll('.blog-card');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            cards.forEach((card, i) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                card.style.transition = `opacity 0.5s ease ${i * 0.1}s, transform 0.5s ease ${i * 0.1}s`;
+                observer.observe(card);
+            });
+
+        } catch (err) {
+            console.warn('Blogs API unavailable:', err.message);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadBlogs);
+    } else {
+        loadBlogs();
+    }
+})();
+
+/* ══════════════════════════════════════
    SCROLL-DRIVEN MARQUEE
    ══════════════════════════════════════ */
 (function () {
@@ -422,3 +493,4 @@
 
     animate();
 })();
+

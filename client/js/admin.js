@@ -50,16 +50,110 @@
     }
 
     // ══════════════════════════════════════
+    //  AUTH HELPERS
+    // ══════════════════════════════════════
+
+    /**
+     * Check if the stored JWT token is expired by decoding its payload.
+     * Returns true if the token is missing or expired.
+     */
+    function isTokenExpired(token) {
+        if (!token) return true;
+        try {
+            const parts = token.split('.');
+            if (parts.length !== 3) return true;
+            const payload = JSON.parse(atob(parts[1]));
+            if (!payload.exp) return false; // no expiry means it's perpetual
+            // exp is in seconds, Date.now() is in milliseconds
+            return Date.now() >= payload.exp * 1000;
+        } catch (e) {
+            return true; // malformed token
+        }
+    }
+
+    /**
+     * Force logout — clear token and show login screen.
+     */
+    function forceLogout(message) {
+        authToken = null;
+        localStorage.removeItem('portfolio_admin_token');
+        checkAuth();
+        if (message) {
+            showToast(message, 'error');
+        }
+    }
+
+    /**
+     * Wrapper around fetch that automatically adds the auth header
+     * and handles 401/403 responses by forcing a re-login.
+     */
+    async function fetchWithAuth(url, options = {}) {
+        // Check token expiry before making the request
+        if (isTokenExpired(authToken)) {
+            forceLogout('Session expired. Please log in again.');
+            throw new Error('TOKEN_EXPIRED');
+        }
+
+        // Add Authorization header
+        if (!options.headers) {
+            options.headers = {};
+        }
+        // Don't set Content-Type for FormData (let browser set multipart boundary)
+        if (!(options.body instanceof FormData)) {
+            if (!options.headers['Content-Type']) {
+                options.headers['Content-Type'] = 'application/json';
+            }
+        }
+        options.headers['Authorization'] = `Bearer ${authToken}`;
+
+        const res = await fetch(url, options);
+
+        // If we get 401 or 403, force re-login
+        if (res.status === 401 || res.status === 403) {
+            forceLogout('Session expired. Please log in again.');
+            throw new Error('TOKEN_EXPIRED');
+        }
+
+        return res;
+    }
+
+    // ══════════════════════════════════════
     //  AUTH
     // ══════════════════════════════════════
-    function checkAuth() {
-        if (authToken) {
+    async function checkAuth() {
+        if (authToken && !isTokenExpired(authToken)) {
+            // Verify token with the server to catch secret changes etc.
+            try {
+                const verifyRes = await fetch(`${API_BASE}/admin/verify`, {
+                    headers: { Authorization: `Bearer ${authToken}` },
+                });
+                if (!verifyRes.ok) {
+                    // Token is invalid on the server side
+                    authToken = null;
+                    localStorage.removeItem('portfolio_admin_token');
+                    loginScreen.classList.remove('hidden');
+                    dashboard.classList.add('hidden');
+                    showToast('Session expired. Please log in again.', 'error');
+                    return;
+                }
+            } catch (err) {
+                // Server unreachable — still show dashboard with cached token
+                // (writes will fail later with proper error handling)
+            }
+
             loginScreen.classList.add('hidden');
             dashboard.classList.remove('hidden');
             loadSkills();
             loadProjects();
             loadResume();
+            loadBlogs();
         } else {
+            // Clear invalid/expired token
+            if (authToken) {
+                authToken = null;
+                localStorage.removeItem('portfolio_admin_token');
+                showToast('Session expired. Please log in again.', 'error');
+            }
             loginScreen.classList.remove('hidden');
             dashboard.classList.add('hidden');
         }
@@ -150,9 +244,8 @@
             uploadResumeBtn.textContent = 'Uploading...';
             uploadResumeBtn.disabled = true;
 
-            const res = await fetch(`${API_BASE}/resume`, {
+            const res = await fetchWithAuth(`${API_BASE}/resume`, {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${authToken}` },
                 body: formData,
             });
 
@@ -166,7 +259,9 @@
             resetResumeForm();
             loadResume();
         } catch (err) {
-            showToast('Server error.', 'error');
+            if (err.message !== 'TOKEN_EXPIRED') {
+                showToast('Server error.', 'error');
+            }
         } finally {
             uploadResumeBtn.textContent = 'Upload';
             uploadResumeBtn.disabled = false;
@@ -176,9 +271,8 @@
     async function deleteResume() {
         if (!confirm('Delete the resume?')) return;
         try {
-            const res = await fetch(`${API_BASE}/resume`, {
+            const res = await fetchWithAuth(`${API_BASE}/resume`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${authToken}` },
             });
             if (!res.ok) {
                 const data = await res.json();
@@ -188,7 +282,9 @@
             showToast('Resume deleted.');
             loadResume();
         } catch (err) {
-            showToast('Server error.', 'error');
+            if (err.message !== 'TOKEN_EXPIRED') {
+                showToast('Server error.', 'error');
+            }
         }
     }
 
@@ -275,9 +371,8 @@
         if (!confirm('Delete this skill?')) return;
 
         try {
-            const res = await fetch(`${API_BASE}/skills/${id}`, {
+            const res = await fetchWithAuth(`${API_BASE}/skills/${id}`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${authToken}` },
             });
 
             if (!res.ok) {
@@ -289,7 +384,9 @@
             showToast('Skill deleted.');
             loadSkills();
         } catch (err) {
-            showToast('Server error.', 'error');
+            if (err.message !== 'TOKEN_EXPIRED') {
+                showToast('Server error.', 'error');
+            }
         }
     };
 
@@ -367,12 +464,8 @@
         const method = isEdit ? 'PUT' : 'POST';
 
         try {
-            const res = await fetch(url, {
+            const res = await fetchWithAuth(url, {
                 method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${authToken}`,
-                },
                 body: JSON.stringify({ name, icon, row, angle, radius, filter }),
             });
 
@@ -387,7 +480,9 @@
             clearSkillForm();
             loadSkills();
         } catch (err) {
-            showToast('Server error.', 'error');
+            if (err.message !== 'TOKEN_EXPIRED') {
+                showToast('Server error.', 'error');
+            }
         }
     });
 
@@ -441,9 +536,8 @@
         if (!confirm('Delete this project?')) return;
 
         try {
-            const res = await fetch(`${API_BASE}/projects/${id}`, {
+            const res = await fetchWithAuth(`${API_BASE}/projects/${id}`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${authToken}` },
             });
 
             if (!res.ok) {
@@ -455,7 +549,9 @@
             showToast('Project deleted.');
             loadProjects();
         } catch (err) {
-            showToast('Server error.', 'error');
+            if (err.message !== 'TOKEN_EXPIRED') {
+                showToast('Server error.', 'error');
+            }
         }
     };
 
@@ -469,7 +565,18 @@
 
             document.getElementById('project-title').value = p.title;
             document.getElementById('project-desc').value = p.description;
-            document.getElementById('project-image').value = p.image || '';
+            
+            document.getElementById('project-image-file').value = '';
+            document.getElementById('project-image-url').value = p.image || '';
+            const preview = document.getElementById('project-image-preview');
+            if (p.image) {
+                preview.src = p.image;
+                preview.style.display = 'block';
+            } else {
+                preview.src = '';
+                preview.style.display = 'none';
+            }
+
             document.getElementById('project-tags').value = (p.tags || []).join(', ');
             document.getElementById('project-github').value = p.github || '';
             document.getElementById('project-demo').value = p.demo || '';
@@ -486,7 +593,10 @@
     function clearProjectForm() {
         document.getElementById('project-title').value = '';
         document.getElementById('project-desc').value = '';
-        document.getElementById('project-image').value = '';
+        document.getElementById('project-image-file').value = '';
+        document.getElementById('project-image-url').value = '';
+        document.getElementById('project-image-preview').style.display = 'none';
+        document.getElementById('project-image-preview').src = '';
         document.getElementById('project-tags').value = '';
         document.getElementById('project-github').value = '';
         document.getElementById('project-demo').value = '';
@@ -494,6 +604,25 @@
         addProjectForm.querySelector('h3').textContent = 'Add New Project';
         saveProjectBtn.textContent = 'Save Project';
     }
+
+    // Image preview listener
+    document.getElementById('project-image-file').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        const preview = document.getElementById('project-image-preview');
+        if (file) {
+            preview.src = URL.createObjectURL(file);
+            preview.style.display = 'block';
+        } else {
+            const hiddenUrl = document.getElementById('project-image-url').value;
+            if (hiddenUrl) {
+                preview.src = hiddenUrl;
+                preview.style.display = 'block';
+            } else {
+                preview.src = '';
+                preview.style.display = 'none';
+            }
+        }
+    });
 
     // Toggle add form
     toggleAddProject.addEventListener('click', () => {
@@ -514,7 +643,8 @@
     saveProjectBtn.addEventListener('click', async () => {
         const title = document.getElementById('project-title').value.trim();
         const description = document.getElementById('project-desc').value.trim();
-        const image = document.getElementById('project-image').value.trim();
+        let image = document.getElementById('project-image-url').value;
+        const fileInput = document.getElementById('project-image-file');
         const tagsRaw = document.getElementById('project-tags').value.trim();
         const github = document.getElementById('project-github').value.trim();
         const demo = document.getElementById('project-demo').value.trim();
@@ -524,28 +654,50 @@
             return;
         }
 
-        const tags = tagsRaw
-            ? tagsRaw.split(',').map((t) => t.trim()).filter(Boolean)
-            : [];
-
         const editId = addProjectForm.getAttribute('data-edit-id');
         const isEdit = !!editId;
-        const url = isEdit ? `${API_BASE}/projects/${editId}` : `${API_BASE}/projects`;
-        const method = isEdit ? 'PUT' : 'POST';
+
+        saveProjectBtn.disabled = true;
+        saveProjectBtn.textContent = 'Saving...';
 
         try {
-            const res = await fetch(url, {
+            // Upload image if selected
+            if (fileInput.files.length > 0) {
+                const formData = new FormData();
+                formData.append('image', fileInput.files[0]);
+
+                const uploadRes = await fetchWithAuth(`${API_BASE}/upload`, {
+                    method: 'POST',
+                    body: formData,
+                });
+                if (!uploadRes.ok) {
+                    const errData = await uploadRes.json();
+                    showToast(errData.error || 'Image upload failed', 'error');
+                    saveProjectBtn.disabled = false;
+                    saveProjectBtn.textContent = isEdit ? 'Update Project' : 'Save Project';
+                    return;
+                }
+                const uploadData = await uploadRes.json();
+                image = uploadData.url;
+            }
+
+            const tags = tagsRaw
+                ? tagsRaw.split(',').map((t) => t.trim()).filter(Boolean)
+                : [];
+
+            const url = isEdit ? `${API_BASE}/projects/${editId}` : `${API_BASE}/projects`;
+            const method = isEdit ? 'PUT' : 'POST';
+
+            const res = await fetchWithAuth(url, {
                 method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${authToken}`,
-                },
                 body: JSON.stringify({ title, description, image, tags, github, demo }),
             });
 
             if (!res.ok) {
                 const data = await res.json();
                 showToast(data.error || 'Save failed.', 'error');
+                saveProjectBtn.disabled = false;
+                saveProjectBtn.textContent = isEdit ? 'Update Project' : 'Save Project';
                 return;
             }
 
@@ -554,9 +706,168 @@
             clearProjectForm();
             loadProjects();
         } catch (err) {
-            showToast('Server error.', 'error');
+            if (err.message !== 'TOKEN_EXPIRED') {
+                showToast('Server error.', 'error');
+            }
+        } finally {
+            saveProjectBtn.disabled = false;
+            saveProjectBtn.textContent = isEdit ? 'Update Project' : 'Save Project';
         }
     });
+
+    // ══════════════════════════════════════
+    //  BLOGS CRUD
+    // ══════════════════════════════════════
+    const blogsList = document.getElementById('blogs-list');
+    const toggleAddBlog = document.getElementById('add-blog-btn');
+    const addBlogForm = document.getElementById('blog-form-container');
+    const saveBlogBtn = document.getElementById('save-blog-btn');
+    const cancelBlogBtn = document.getElementById('cancel-blog-btn');
+
+    async function loadBlogs() {
+        if (!blogsList) return;
+        try {
+            const res = await fetch(`${API_BASE}/blogs`);
+            const data = await res.json();
+            renderBlogs(data.posts || []);
+        } catch (err) {
+            blogsList.innerHTML = '<p class="loading-text">Failed to load blogs.</p>';
+        }
+    }
+
+    function renderBlogs(blogs) {
+        if (!blogsList) return;
+        if (!blogs.length) {
+            blogsList.innerHTML = '<p class="loading-text">No blogs yet. Add one!</p>';
+            return;
+        }
+
+        blogsList.innerHTML = blogs.map((b) => `
+            <div class="item-card project-item-card" data-id="${b.id}">
+                <div class="project-info">
+                    <h4>${b.title}</h4>
+                    <p class="project-desc">${b.description}</p>
+                    <div class="project-links">
+                        ${b.link ? `<a href="${b.link}" target="_blank">View Link ↗</a>` : ''}
+                    </div>
+                </div>
+                <div class="item-card-actions">
+                    <button class="btn-edit" onclick="editBlog(${b.id})">Edit</button>
+                    <button class="btn-delete" onclick="deleteBlog(${b.id})">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    window.deleteBlog = async function (id) {
+        if (!confirm('Delete this blog?')) return;
+        try {
+            const res = await fetchWithAuth(`${API_BASE}/blogs/${id}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const data = await res.json();
+                showToast(data.error || 'Delete failed.', 'error');
+                return;
+            }
+            showToast('Blog deleted.');
+            loadBlogs();
+        } catch (err) {
+            if (err.message !== 'TOKEN_EXPIRED') showToast('Server error.', 'error');
+        }
+    };
+
+    window.editBlog = async function (id) {
+        try {
+            const res = await fetch(`${API_BASE}/blogs`);
+            const data = await res.json();
+            const b = data.posts.find(blog => blog.id === id);
+            if (!b) return;
+
+            document.getElementById('blog-title').value = b.title;
+            document.getElementById('blog-link').value = b.link || '';
+            document.getElementById('blog-description').value = b.description;
+
+            addBlogForm.classList.remove('hidden');
+            addBlogForm.setAttribute('data-edit-id', id);
+            document.getElementById('blog-form-title').textContent = 'Edit Blog';
+            saveBlogBtn.textContent = 'Update Blog';
+        } catch (err) {
+            showToast('Failed to load blog data.', 'error');
+        }
+    };
+
+    function clearBlogForm() {
+        document.getElementById('blog-title').value = '';
+        document.getElementById('blog-link').value = '';
+        document.getElementById('blog-description').value = '';
+        addBlogForm.removeAttribute('data-edit-id');
+        document.getElementById('blog-form-title').textContent = 'Add New Blog';
+        saveBlogBtn.textContent = 'Save Blog';
+    }
+
+    if (toggleAddBlog) {
+        toggleAddBlog.addEventListener('click', () => {
+            if (!addBlogForm.classList.contains('hidden')) {
+                addBlogForm.classList.add('hidden');
+                clearBlogForm();
+            } else {
+                clearBlogForm();
+                addBlogForm.classList.remove('hidden');
+            }
+        });
+    }
+
+    if (cancelBlogBtn) {
+        cancelBlogBtn.addEventListener('click', () => {
+            addBlogForm.classList.add('hidden');
+            clearBlogForm();
+        });
+    }
+
+    if (saveBlogBtn) {
+        saveBlogBtn.addEventListener('click', async () => {
+            const title = document.getElementById('blog-title').value.trim();
+            const link = document.getElementById('blog-link').value.trim();
+            const description = document.getElementById('blog-description').value.trim();
+
+            if (!title || !description || !link) {
+                showToast('Topic title, link, and description are required.', 'error');
+                return;
+            }
+
+            const editId = addBlogForm.getAttribute('data-edit-id');
+            const isEdit = !!editId;
+            const url = isEdit ? `${API_BASE}/blogs/${editId}` : `${API_BASE}/blogs`;
+            const method = isEdit ? 'PUT' : 'POST';
+
+            saveBlogBtn.disabled = true;
+            saveBlogBtn.textContent = 'Saving...';
+
+            try {
+                const res = await fetchWithAuth(url, {
+                    method,
+                    body: JSON.stringify({ title, link, description }),
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    showToast(data.error || 'Save failed.', 'error');
+                    return;
+                }
+
+                showToast(isEdit ? 'Blog updated!' : 'Blog added!');
+                addBlogForm.classList.add('hidden');
+                clearBlogForm();
+                loadBlogs();
+            } catch (err) {
+                if (err.message !== 'TOKEN_EXPIRED') {
+                    showToast('Server error.', 'error');
+                }
+            } finally {
+                saveBlogBtn.disabled = false;
+                saveBlogBtn.textContent = isEdit ? 'Update Blog' : 'Save Blog';
+            }
+        });
+    }
 
     // ── Init ──
     checkAuth();
