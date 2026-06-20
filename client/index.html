@@ -13,40 +13,19 @@
 </head>
 
 <body>
-    <!-- ── Loading Screen (Dancing Yoda) ── -->
+    <!-- ── Loading Screen (Planet) ── -->
     <div id="loading-screen">
-        <div class="yoda-scene">
-            <!-- Yoda body built from CSS shapes -->
-            <div class="yoda-body">
-                <div class="yoda-ear yoda-ear--left"></div>
-                <div class="yoda-ear yoda-ear--right"></div>
-                <div class="yoda-head">
-                    <div class="yoda-eye yoda-eye--left"></div>
-                    <div class="yoda-eye yoda-eye--right"></div>
-                </div>
-                <div class="yoda-robe"></div>
-                <div class="yoda-arm yoda-arm--left"></div>
-                <div class="yoda-arm yoda-arm--right"></div>
-                <div class="yoda-saber">
-                    <div class="yoda-saber-blade"></div>
-                    <div class="yoda-saber-hilt"></div>
-                </div>
-                <div class="yoda-leg yoda-leg--left"></div>
-                <div class="yoda-leg yoda-leg--right"></div>
-            </div>
-            <!-- Ground glow -->
-            <div class="yoda-ground-glow"></div>
-        </div>
+        <div class="planet"></div>
         <p class="loading-text">Patience you must have...</p>
     </div>
 
 
     <!-- ── Main Content (hidden until loading completes) ── -->
     <div id="main-content">
-        <section class="hero-section">
+        <section id="hero" class="hero-section">
 
             <nav id="navbar">
-                <div id="name">[N]ishant</div>
+                <a href="#hero" id="name">[N]ishant</a>
                 <div id="menu">
                     <a href="#about">About</a>
                     <a href="#skills">Skills</a>

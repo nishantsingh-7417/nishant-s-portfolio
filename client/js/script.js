@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════
-   LOADING SCREEN — Dancing Yoda (CSS-only animation)
+   LOADING SCREEN — Planet (CSS-only animation)
    JS just handles fade-out when page is ready.
    ══════════════════════════════════════ */
 (function () {
@@ -20,7 +20,7 @@
     // When everything is loaded, fade out after a minimum dance time
     window.addEventListener('load', () => {
         const elapsed = performance.now();
-        const minTime = 2500; // let Yoda dance for at least 2.5s
+        const minTime = 2500; // let Planet spin for at least 2.5s
         const delay = Math.max(0, minTime - elapsed);
         setTimeout(revealPage, delay);
     });
