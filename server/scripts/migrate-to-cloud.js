@@ -12,8 +12,8 @@ if (!process.env.DATABASE_URL) {
 }
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false } // Required for Neon/Supabase
+  connectionString: process.env.DATABASE_URL
+  // ssl: { rejectUnauthorized: false } // Only needed for remote DBs like Neon/Supabase
 });
 
 async function runMigration() {

@@ -4,10 +4,16 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
+const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DATA_FILE = path.join(__dirname, 'data.json');
+
+// Initialize PostgreSQL pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+  // ssl: { rejectUnauthorized: false } // Only needed for remote DBs
+});
 
 // ── Middleware ──
 app.use(cors());
@@ -17,23 +23,6 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'client')));
 // Serve uploads folder as static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// ══════════════════════════════════════
-//  DATA HELPERS (JSON file as database)
-// ══════════════════════════════════════
-function readData() {
-    try {
-        const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-        return JSON.parse(raw);
-    } catch (err) {
-        console.error('Error reading data.json:', err.message);
-        return { skills: [], projects: [] };
-    }
-}
-
-function writeData(data) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
-}
 
 // ══════════════════════════════════════
 //  AUTH MIDDLEWARE
@@ -87,72 +76,66 @@ app.get('/api/admin/verify', authenticateToken, (req, res) => {
 // ══════════════════════════════════════
 
 // GET all skills (public)
-app.get('/api/skills', (req, res) => {
-    const data = readData();
-    res.json(data.skills);
+app.get('/api/skills', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM skills ORDER BY id ASC');
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // POST add a new skill (admin only)
-app.post('/api/skills', authenticateToken, (req, res) => {
+app.post('/api/skills', authenticateToken, async (req, res) => {
     const { name, icon, row, angle, radius, filter } = req.body;
 
     if (!name || !icon) {
         return res.status(400).json({ error: 'Name and icon URL are required.' });
     }
 
-    const data = readData();
-    const maxId = data.skills.reduce((max, s) => Math.max(max, s.id), 0);
-
-    const newSkill = {
-        id: maxId + 1,
-        name,
-        icon,
-        row: row || 1,
-        angle: angle || 0,
-        radius: radius || 200,
-        filter: filter || '',
-    };
-
-    data.skills.push(newSkill);
-    writeData(data);
-    res.status(201).json(newSkill);
+    try {
+        const result = await pool.query(
+            'INSERT INTO skills (name, icon, row, angle, radius, filter) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+            [name, icon, row || 1, angle || 0, radius || 200, filter || '']
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // PUT update a skill (admin only)
-app.put('/api/skills/:id', authenticateToken, (req, res) => {
+app.put('/api/skills/:id', authenticateToken, async (req, res) => {
     const id = parseInt(req.params.id);
-    const data = readData();
-    const index = data.skills.findIndex((s) => s.id === id);
-
-    if (index === -1) {
-        return res.status(404).json({ error: 'Skill not found.' });
-    }
-
     const { name, icon, row, angle, radius, filter } = req.body;
-    if (name !== undefined) data.skills[index].name = name;
-    if (icon !== undefined) data.skills[index].icon = icon;
-    if (row !== undefined) data.skills[index].row = row;
-    if (angle !== undefined) data.skills[index].angle = angle;
-    if (radius !== undefined) data.skills[index].radius = radius;
-    if (filter !== undefined) data.skills[index].filter = filter;
 
-    writeData(data);
-    res.json(data.skills[index]);
+    try {
+        const result = await pool.query(
+            'UPDATE skills SET name = COALESCE($1, name), icon = COALESCE($2, icon), row = COALESCE($3, row), angle = COALESCE($4, angle), radius = COALESCE($5, radius), filter = COALESCE($6, filter) WHERE id = $7 RETURNING *',
+            [name, icon, row, angle, radius, filter, id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Skill not found.' });
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // DELETE remove a skill (admin only)
-app.delete('/api/skills/:id', authenticateToken, (req, res) => {
+app.delete('/api/skills/:id', authenticateToken, async (req, res) => {
     const id = parseInt(req.params.id);
-    const data = readData();
-    const index = data.skills.findIndex((s) => s.id === id);
 
-    if (index === -1) {
-        return res.status(404).json({ error: 'Skill not found.' });
+    try {
+        const result = await pool.query('DELETE FROM skills WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Skill not found.' });
+        }
+        res.json({ message: 'Skill deleted.', skill: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
-
-    const removed = data.skills.splice(index, 1);
-    writeData(data);
-    res.json({ message: 'Skill deleted.', skill: removed[0] });
 });
 
 // ══════════════════════════════════════
@@ -160,78 +143,69 @@ app.delete('/api/skills/:id', authenticateToken, (req, res) => {
 // ══════════════════════════════════════
 
 // GET all projects (public)
-app.get('/api/projects', (req, res) => {
-    const data = readData();
-    res.json(data.projects);
+app.get('/api/projects', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM projects ORDER BY id ASC');
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // POST add a new project (admin only)
-app.post('/api/projects', authenticateToken, (req, res) => {
+app.post('/api/projects', authenticateToken, async (req, res) => {
     const { title, description, image, tags, github, demo } = req.body;
 
     if (!title || !description) {
-        return res
-            .status(400)
-            .json({ error: 'Title and description are required.' });
+        return res.status(400).json({ error: 'Title and description are required.' });
     }
 
-    const data = readData();
-    const maxId = data.projects.reduce((max, p) => Math.max(max, p.id), 0);
-
-    const newProject = {
-        id: maxId + 1,
-        title,
-        description,
-        image: image || '',
-        tags: tags || [],
-        github: github || '',
-        demo: demo || '',
-    };
-
-    data.projects.push(newProject);
-    writeData(data);
-    res.status(201).json(newProject);
+    try {
+        const result = await pool.query(
+            'INSERT INTO projects (title, description, image, tags, github, demo) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+            [title, description, image || '', tags || [], github || '', demo || '']
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // PUT update a project (admin only)
-app.put('/api/projects/:id', authenticateToken, (req, res) => {
+app.put('/api/projects/:id', authenticateToken, async (req, res) => {
     const id = parseInt(req.params.id);
-    const data = readData();
-    const index = data.projects.findIndex((p) => p.id === id);
-
-    if (index === -1) {
-        return res.status(404).json({ error: 'Project not found.' });
-    }
-
     const { title, description, image, tags, github, demo } = req.body;
-    if (title !== undefined) data.projects[index].title = title;
-    if (description !== undefined) data.projects[index].description = description;
-    if (image !== undefined) data.projects[index].image = image;
-    if (tags !== undefined) data.projects[index].tags = tags;
-    if (github !== undefined) data.projects[index].github = github;
-    if (demo !== undefined) data.projects[index].demo = demo;
 
-    writeData(data);
-    res.json(data.projects[index]);
+    try {
+        const result = await pool.query(
+            'UPDATE projects SET title = COALESCE($1, title), description = COALESCE($2, description), image = COALESCE($3, image), tags = COALESCE($4, tags), github = COALESCE($5, github), demo = COALESCE($6, demo) WHERE id = $7 RETURNING *',
+            [title, description, image, tags, github, demo, id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Project not found.' });
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // DELETE remove a project (admin only)
-app.delete('/api/projects/:id', authenticateToken, (req, res) => {
+app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
     const id = parseInt(req.params.id);
-    const data = readData();
-    const index = data.projects.findIndex((p) => p.id === id);
-
-    if (index === -1) {
-        return res.status(404).json({ error: 'Project not found.' });
+    try {
+        const result = await pool.query('DELETE FROM projects WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Project not found.' });
+        }
+        res.json({ message: 'Project deleted.', project: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
-
-    const removed = data.projects.splice(index, 1);
-    writeData(data);
-    res.json({ message: 'Project deleted.', project: removed[0] });
 });
 
 // ══════════════════════════════════════
-//  RESUME API
+//  RESUME API (Local files for now)
 // ══════════════════════════════════════
 const multer = require('multer');
 
@@ -242,7 +216,6 @@ if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, UPLOADS_DIR),
     filename: (req, file, cb) => {
-        // Always save as resume.<ext> so there's only ever one file
         const ext = path.extname(file.originalname).toLowerCase();
         cb(null, `resume${ext}`);
     },
@@ -261,46 +234,56 @@ const upload = multer({
 });
 
 // GET resume info (public) — returns metadata, not the file
-app.get('/api/resume', (req, res) => {
-    const data = readData();
-    if (!data.resume || !data.resume.filename) {
-        return res.status(404).json({ error: 'No resume uploaded yet.' });
-    }
+app.get('/api/resume', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM resume_metadata ORDER BY id DESC LIMIT 1');
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'No resume uploaded yet.' });
+        }
 
-    const filePath = path.join(UPLOADS_DIR, data.resume.filename);
-    if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ error: 'Resume file not found on disk.' });
-    }
+        const data = result.rows[0];
+        // Ensure file exists
+        const filePath = path.join(UPLOADS_DIR, data.filename);
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ error: 'Resume file not found on disk.' });
+        }
 
-    res.json({
-        filename: data.resume.filename,
-        originalName: data.resume.originalName,
-        uploadedAt: data.resume.uploadedAt,
-        size: data.resume.size,
-        downloadUrl: '/api/resume/download',
-    });
+        res.json({
+            filename: data.filename,
+            originalName: data.original_name,
+            uploadedAt: data.uploaded_at,
+            size: data.size,
+            downloadUrl: '/api/resume/download',
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // GET resume download (public) — serves the actual PDF
-app.get('/api/resume/download', (req, res) => {
-    const data = readData();
-    if (!data.resume || !data.resume.filename) {
-        return res.status(404).json({ error: 'No resume uploaded yet.' });
-    }
+app.get('/api/resume/download', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM resume_metadata ORDER BY id DESC LIMIT 1');
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'No resume uploaded yet.' });
+        }
+        
+        const data = result.rows[0];
+        const filePath = path.join(UPLOADS_DIR, data.filename);
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ error: 'Resume file not found on disk.' });
+        }
 
-    const filePath = path.join(UPLOADS_DIR, data.resume.filename);
-    if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ error: 'Resume file not found on disk.' });
+        const downloadName = data.original_name || data.filename;
+        res.download(filePath, downloadName);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
-
-    // Use the original filename for the download
-    const downloadName = data.resume.originalName || data.resume.filename;
-    res.download(filePath, downloadName);
 });
 
 // POST upload resume (admin only)
 app.post('/api/resume', authenticateToken, (req, res) => {
-    upload.single('resume')(req, res, (err) => {
+    upload.single('resume')(req, res, async (err) => {
         if (err instanceof multer.MulterError) {
             if (err.code === 'LIMIT_FILE_SIZE') {
                 return res.status(400).json({ error: 'File too large. Max 10 MB.' });
@@ -314,46 +297,51 @@ app.post('/api/resume', authenticateToken, (req, res) => {
             return res.status(400).json({ error: 'No file uploaded.' });
         }
 
-        // Delete old resume if it exists and has a different filename
-        const data = readData();
-        if (data.resume && data.resume.filename && data.resume.filename !== req.file.filename) {
-            const oldPath = path.join(UPLOADS_DIR, data.resume.filename);
-            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        try {
+            // Delete old resume metadata
+            await pool.query('DELETE FROM resume_metadata');
+            
+            // Insert new metadata
+            const result = await pool.query(
+                'INSERT INTO resume_metadata (filename, original_name, size) VALUES ($1, $2, $3) RETURNING *',
+                [req.file.filename, req.file.originalname, req.file.size]
+            );
+
+            res.json({
+                message: 'Resume uploaded successfully.',
+                resume: {
+                    filename: result.rows[0].filename,
+                    originalName: result.rows[0].original_name,
+                    uploadedAt: result.rows[0].uploaded_at,
+                    size: result.rows[0].size
+                }
+            });
+        } catch (error) {
+            res.status(500).json({ error: error.message });
         }
-
-        // Save metadata
-        data.resume = {
-            filename: req.file.filename,
-            originalName: req.file.originalname,
-            uploadedAt: new Date().toISOString(),
-            size: req.file.size,
-        };
-        writeData(data);
-
-        res.json({
-            message: 'Resume uploaded successfully.',
-            resume: data.resume,
-        });
     });
 });
 
 // DELETE resume (admin only)
-app.delete('/api/resume', authenticateToken, (req, res) => {
-    const data = readData();
-    if (!data.resume || !data.resume.filename) {
-        return res.status(404).json({ error: 'No resume to delete.' });
+app.delete('/api/resume', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('DELETE FROM resume_metadata RETURNING *');
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'No resume to delete.' });
+        }
+        
+        const data = result.rows[0];
+        const filePath = path.join(UPLOADS_DIR, data.filename);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+        res.json({ message: 'Resume deleted.' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
-
-    const filePath = path.join(UPLOADS_DIR, data.resume.filename);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-
-    delete data.resume;
-    writeData(data);
-    res.json({ message: 'Resume deleted.' });
 });
 
 // ══════════════════════════════════════
-//  IMAGE UPLOAD API
+//  IMAGE UPLOAD API (Local files for now)
 // ══════════════════════════════════════
 const uploadImageConfig = multer({
     storage: multer.diskStorage({
@@ -389,127 +377,116 @@ app.post('/api/upload', authenticateToken, (req, res) => {
 });
 
 // ══════════════════════════════════════
-//  BLOGS API (Manual backend)
+//  BLOGS API 
 // ══════════════════════════════════════
 
 // GET all blogs (public)
-app.get('/api/blogs', (req, res) => {
-    const data = readData();
-    // Return wrapped in posts array to keep frontend somewhat compatible 
-    // although we will update frontend next.
-    res.json({ posts: data.blogs || [] });
+app.get('/api/blogs', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM blogs ORDER BY id ASC');
+        res.json({ posts: result.rows });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // POST add a new blog (admin only)
-app.post('/api/blogs', authenticateToken, (req, res) => {
+app.post('/api/blogs', authenticateToken, async (req, res) => {
     const { title, description, link } = req.body;
 
     if (!title || !description || !link) {
-        return res
-            .status(400)
-            .json({ error: 'Title, description, and link are required.' });
+        return res.status(400).json({ error: 'Title, description, and link are required.' });
     }
 
-    const data = readData();
-    if (!data.blogs) data.blogs = [];
-    const maxId = data.blogs.reduce((max, b) => Math.max(max, b.id || 0), 0);
-
-    const newBlog = {
-        id: maxId + 1,
-        title,
-        description,
-        link,
-    };
-
-    data.blogs.push(newBlog);
-    writeData(data);
-    res.status(201).json(newBlog);
+    try {
+        const result = await pool.query(
+            'INSERT INTO blogs (title, description, link) VALUES ($1, $2, $3) RETURNING *',
+            [title, description, link]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // PUT update a blog (admin only)
-app.put('/api/blogs/:id', authenticateToken, (req, res) => {
+app.put('/api/blogs/:id', authenticateToken, async (req, res) => {
     const id = parseInt(req.params.id);
-    const data = readData();
-    if (!data.blogs) data.blogs = [];
-    const index = data.blogs.findIndex((b) => b.id === id);
-
-    if (index === -1) {
-        return res.status(404).json({ error: 'Blog not found.' });
-    }
-
     const { title, description, link } = req.body;
-    if (title !== undefined) data.blogs[index].title = title;
-    if (description !== undefined) data.blogs[index].description = description;
-    if (link !== undefined) data.blogs[index].link = link;
 
-    writeData(data);
-    res.json(data.blogs[index]);
+    try {
+        const result = await pool.query(
+            'UPDATE blogs SET title = COALESCE($1, title), description = COALESCE($2, description), link = COALESCE($3, link) WHERE id = $4 RETURNING *',
+            [title, description, link, id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Blog not found.' });
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // DELETE remove a blog (admin only)
-app.delete('/api/blogs/:id', authenticateToken, (req, res) => {
+app.delete('/api/blogs/:id', authenticateToken, async (req, res) => {
     const id = parseInt(req.params.id);
-    const data = readData();
-    if (!data.blogs) data.blogs = [];
-    const index = data.blogs.findIndex((b) => b.id === id);
-
-    if (index === -1) {
-        return res.status(404).json({ error: 'Blog not found.' });
+    try {
+        const result = await pool.query('DELETE FROM blogs WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Blog not found.' });
+        }
+        res.json({ message: 'Blog deleted.', blog: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
-
-    const removed = data.blogs.splice(index, 1);
-    writeData(data);
-    res.json({ message: 'Blog deleted.', blog: removed[0] });
 });
+
 // ══════════════════════════════════════
 //  MESSAGES API (Contact Form)
 // ══════════════════════════════════════
 
 // GET all messages (admin only)
-app.get('/api/messages', authenticateToken, (req, res) => {
-    const data = readData();
-    res.json(data.messages || []);
+app.get('/api/messages', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM messages ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // POST add a new message (public)
-app.post('/api/messages', (req, res) => {
+app.post('/api/messages', async (req, res) => {
     const { name, email, message } = req.body;
 
     if (!name || !email || !message) {
         return res.status(400).json({ error: 'Name, email, and message are required.' });
     }
 
-    const data = readData();
-    if (!data.messages) data.messages = [];
-    const maxId = data.messages.reduce((max, m) => Math.max(max, m.id || 0), 0);
-
-    const newMessage = {
-        id: maxId + 1,
-        name,
-        email,
-        message,
-        createdAt: new Date().toISOString()
-    };
-
-    data.messages.push(newMessage);
-    writeData(data);
-    res.status(201).json({ message: 'Message sent successfully!' });
+    try {
+        await pool.query(
+            'INSERT INTO messages (name, email, message) VALUES ($1, $2, $3)',
+            [name, email, message]
+        );
+        res.status(201).json({ message: 'Message sent successfully!' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // DELETE remove a message (admin only)
-app.delete('/api/messages/:id', authenticateToken, (req, res) => {
+app.delete('/api/messages/:id', authenticateToken, async (req, res) => {
     const id = parseInt(req.params.id);
-    const data = readData();
-    if (!data.messages) data.messages = [];
-    const index = data.messages.findIndex((m) => m.id === id);
-
-    if (index === -1) {
-        return res.status(404).json({ error: 'Message not found.' });
+    try {
+        const result = await pool.query('DELETE FROM messages WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Message not found.' });
+        }
+        res.json({ message: 'Message deleted.', deleted: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
-
-    const removed = data.messages.splice(index, 1);
-    writeData(data);
-    res.json({ message: 'Message deleted.', deleted: removed[0] });
 });
 
 // ── Start server ──
